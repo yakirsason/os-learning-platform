@@ -1,0 +1,467 @@
+import ConceptCard from '@/components/common/ConceptCard';
+import InteractiveDemo from '@/components/common/InteractiveDemo';
+import InterruptTimeline from '@/components/visualizations/introduction/InterruptTimeline';
+import SyncVsAsyncIO from '@/components/visualizations/introduction/SyncVsAsyncIO';
+import StorageHierarchyPyramid from '@/components/visualizations/introduction/StorageHierarchyPyramid';
+
+<div dir="rtl">
+
+# מבוא למערכות הפעלה
+
+ברוכים הבאים להרצאה הפותחת של הקורס. בהרצאה הזאת נבין **מה עושה מערכת ההפעלה**,
+איך היא בנויה, ומדוע היא הרכיב המרכזי ביותר בכל מחשב מודרני - מהשעון החכם שלכם
+ועד למרכזי הנתונים שמפעילים את האינטרנט.
+
+בסוף ההרצאה תכירו את המבנה הכללי של מערכת הפעלה, את המושג המרכזי של **פסיקות
+(Interrupts)**, את ההבדל בין <span dir="ltr">I/O</span> סינכרוני לאסינכרוני, ואת
+**היררכיית האחסון** שמאזנת בין מהירות, גודל ועלות.
+
+---
+
+## מהי מערכת הפעלה?
+
+<ConceptCard
+  title="מערכת הפעלה"
+  englishTerm="Operating System"
+  description="תוכנה המתווכת בין המשתמש וחומרת המחשב. תפקידה לספק סביבה נוחה לביצוע תוכניות, להקצות משאבי חומרה ביעילות, ולשמור על פעולה תקינה ומאובטחת של המערכת."
+  variant="info"
+/>
+
+למערכת הפעלה שלוש מטרות עיקריות:
+
+- **נוחות למשתמש** — לאפשר הפעלת תוכניות ושימוש במחשב ללא ידע עמוק בחומרה.
+- **ניצול יעיל של המשאבים** — לוודא שהמעבד, הזיכרון וההתקנים עובדים כל הזמן ולא יושבים בטלים.
+- **שימוש נכון בחומרה** — למנוע קונפליקטים בין תוכניות שונות שמתחרות על אותם משאבים.
+
+---
+
+## דוגמה: <span dir="ltr">MS-Paint</span> על <span dir="ltr">Windows</span>
+
+כשפותחים את <span dir="ltr">Paint</span>, מציירים עיגול ושומרים לקובץ, מערכת
+ההפעלה **מעורבת כמעט בכל צעד**. בואו נעבור על האירועים:
+
+<ConceptCard
+  title="הפעלת התוכנית"
+  englishTerm="Program Execution"
+  description="מערכת ההפעלה טוענת את קוד התוכנית מהדיסק לזיכרון, יוצרת לה תהליך, ומקצה לה זמן מעבד וכתובות זיכרון."
+/>
+
+<ConceptCard
+  title="קבלת קלט מהעכבר"
+  englishTerm="Input Handling"
+  description="בכל תזוזה של העכבר ההתקן שולח פסיקה (Interrupt). מערכת ההפעלה לוכדת את הפסיקה, מזהה את המיקום החדש, ומעבירה אותו לאפליקציה שהפוקוס אצלה."
+/>
+
+<ConceptCard
+  title="ציור על המסך"
+  englishTerm="Graphics Output"
+  description="Paint מבקשת ממערכת ההפעלה לעדכן פיקסלים על המסך. ה-OS מפעיל את מנהל ההתקן של כרטיס המסך, שמתרגם את הבקשה לפקודות של החומרה."
+/>
+
+<ConceptCard
+  title="שמירת הקובץ"
+  englishTerm="File Storage"
+  description="בלחיצה על Save התוכנית קוראת לפונקציית מערכת (System Call). מערכת ההפעלה מתרגמת את הבקשה לכתיבה פיזית בדיסק, תוך עדכון מערכת הקבצים."
+/>
+
+הנקודה המרכזית: **האפליקציה אף פעם לא ניגשת ישירות לחומרה**. כל בקשה עוברת דרך
+מערכת ההפעלה.
+
+---
+
+## מבנה מערכת מחשב
+
+כל מערכת מחשב בנויה מארבע שכבות:
+
+<ConceptCard
+  title="חומרה"
+  englishTerm="Hardware"
+  description="המעבד (CPU), הזיכרון (Memory), והתקני קלט/פלט - המשאבים הפיזיים שמבצעים את העבודה בפועל."
+/>
+
+<ConceptCard
+  title="מערכת הפעלה"
+  englishTerm="Operating System"
+  description="השכבה הניהולית שמתאמת בין האפליקציות ומקצה להן את משאבי החומרה."
+/>
+
+<ConceptCard
+  title="תוכניות יישום"
+  englishTerm="Application Programs"
+  description="Word, Chrome, Paint, משחקים - התוכנות שהמשתמשים פותחים ומשתמשים בהן."
+/>
+
+<ConceptCard
+  title="משתמשים"
+  englishTerm="Users"
+  description="בני אדם, מכונות אחרות, או מחשבים אחרים שמשתמשים במערכת דרך האפליקציות."
+/>
+
+---
+
+## הגדרת מערכת הפעלה
+
+מערכת ההפעלה ממלאת שני תפקידים מרכזיים:
+
+<ConceptCard
+  title="מקצה משאבים"
+  englishTerm="Resource Allocator"
+  description="מנהל את כל משאבי החומרה - זמן מעבד, זיכרון, מקום בדיסק, גישה להתקנים - ומחליט בכל רגע מי מקבל מה. במערכת רב-משימתית יש תחרות מתמדת על המשאבים."
+  variant="info"
+/>
+
+<ConceptCard
+  title="תוכנית בקרה"
+  englishTerm="Control Program"
+  description="שולט בביצוע התוכניות כדי למנוע שגיאות ושימוש שגוי של החומרה. אפליקציה לא יכולה לכתוב לזיכרון של אפליקציה אחרת, וגם לא לפנות ישירות להתקנים - הכל עובר דרך ה-OS."
+  variant="info"
+/>
+
+החלק שרץ תמיד ומנהל את החומרה נקרא **Kernel** (גרעין). סביבו יש **system programs**
+(תוכניות מערכת, כמו <span dir="ltr">shell</span> או תוכניות גיבוי) ומעל הכל
+רצות אפליקציות המשתמש.
+
+---
+
+## אתחול מחשב
+
+כשלוחצים על כפתור ההפעלה, המעבד לא יודע כלום על מערכת ההפעלה. יש צורך בתהליך
+מיוחד של טעינה:
+
+<ConceptCard
+  title="תוכנית אתחול"
+  englishTerm="Bootstrap Program"
+  description="התוכנית הראשונה שרצה כשהמחשב נדלק. מאוחסנת ב-ROM או Firmware, מזהה את רכיבי החומרה, טוענת את גרעין מערכת ההפעלה לזיכרון ומעבירה אליו שליטה."
+/>
+
+<ConceptCard
+  title="קושחה"
+  englishTerm="Firmware"
+  description="תוכנה ששמורה בשבב זיכרון לא-נדיף (ROM/EPROM). בפועל מדובר ב-BIOS או UEFI - הקוד הראשון שרץ בהדלקה."
+/>
+
+---
+
+## ארגון מערכת המחשב
+
+המערכת בנויה סביב **מסילת המערכת** (<span dir="ltr">System Bus</span>) - חיבור
+משותף שדרכו כל הרכיבים מתקשרים:
+
+- **מעבד אחד או יותר** (<span dir="ltr">CPUs</span>) - מבצעים את הפקודות.
+- **בקרי התקנים** (<span dir="ltr">Device Controllers</span>) - כל התקן <span dir="ltr">I/O</span> מחובר דרך בקר המתמחה בו.
+- **בקר זיכרון** (<span dir="ltr">Memory Controller</span>) - מתזמן את הגישה לזיכרון הראשי.
+
+<ConceptCard
+  title="בקר התקן"
+  englishTerm="Device Controller"
+  description="שבב שמתרגם בין הפרוטוקול של ההתקן הפיזי (דיסק, מקלדת, רשת) לפרוטוקול של אפיק המערכת. כל בקר מנהל חוצץ (Buffer) מקומי שלו."
+/>
+
+כל הרכיבים מתחרים על מחזורי זיכרון דרך אותו אפיק, והבקר המרכזי מחליט מי מקבל גישה
+באיזה רגע.
+
+---
+
+## <span dir="ltr">Interrupts</span> - הלב של מערכת ההפעלה
+
+<ConceptCard
+  title="פסיקה"
+  englishTerm="Interrupt"
+  description="אות מהחומרה למעבד, המאלץ אותו להפסיק את הביצוע הנוכחי ולטפל באירוע חיצוני. למשל: התקן I/O סיים פעולה, שגיאה חמורה במעבד, או קריאה תוכנית (Trap)."
+  variant="warning"
+/>
+
+<ConceptCard
+  title="וקטור פסיקות"
+  englishTerm="Interrupt Vector"
+  description="טבלה שמכילה כתובת של Handler לכל סוג של פסיקה. כאשר פסיקה מתרחשת, המעבד משתמש בה כדי לקפוץ ישירות לקוד הטיפול המתאים - בלי צורך בבדיקה ידנית."
+/>
+
+<ConceptCard
+  title="מלכודת / חריגה"
+  englishTerm="Trap / Exception"
+  description="פסיקה שמקורה בתוכנה: שגיאה (חלוקה באפס, גישה לזיכרון לא מורשה) או קריאה מכוונת של System Call. מטופלת באותו מנגנון כמו פסיקת חומרה."
+/>
+
+<InteractiveDemo
+  title="מחזור חיים של Interrupt"
+  explanation={
+    <>
+      <p>
+        ההדמיה מציגה את המחזור המלא: התהליך רץ, ההתקן עובד ברקע, בסיום הוא שולח
+        פסיקה, המעבד שומר state וקופץ ל-Handler, ואז חוזר בדיוק למקום שעצר.
+      </p>
+      <p className="mt-2">
+        לחצו על <strong>Play</strong> כדי לראות את הרצף השלם, או על{' '}
+        <strong>Next</strong> כדי להתקדם צעד-צעד ולקרוא את ההסבר של כל שלב.
+      </p>
+    </>
+  }
+>
+  <InterruptTimeline />
+</InteractiveDemo>
+
+---
+
+## טיפול ב-<span dir="ltr">Interrupts</span>
+
+כאשר פסיקה מתרחשת, המעבד מבצע רצף פעולות מדויק:
+
+1. **שמירת state** — ערכי ה-<span dir="ltr">registers</span> ו-<span dir="ltr">Program Counter</span> נשמרים במקום ייעודי בזיכרון.
+2. **קפיצה ל-<span dir="ltr">Handler</span>** — המעבד ניגש לוקטור הפסיקות ומעביר שליטה לכתובת המתאימה לסוג הפסיקה.
+3. **ביצוע הטיפול** — ה-<span dir="ltr">Handler</span> עושה מה שצריך (קורא נתונים מההתקן, מעיר תהליך שחיכה וכו').
+4. **שחזור state וחזרה** — ערכי ה-<span dir="ltr">registers</span> מוחזרים, והתהליך המקורי ממשיך בדיוק מהמקום שעצר.
+
+יש שתי שיטות לזיהוי מקור הפסיקה:
+
+<ConceptCard
+  title="Polling"
+  englishTerm="Polling"
+  description="המעבד עובר על כל התקן ובודק מיהו זה שגרם לפסיקה. פשוט אבל איטי - זמן הבדיקה פרופורציונלי למספר ההתקנים."
+/>
+
+<ConceptCard
+  title="Vectored Interrupts"
+  englishTerm="Vectored"
+  description="כל סוג פסיקה מפנה מראש לכתובת Handler ייחודית דרך וקטור הפסיקות. מהיר ויעיל - זו השיטה הנפוצה במערכות מודרניות."
+  variant="success"
+/>
+
+בנוסף, כל <span dir="ltr">Handler</span> הוא **מקטע קוד נפרד** בגרעין, נטען מראש
+לזיכרון הגרעין כדי להבטיח זמן תגובה קבוע ומהיר.
+
+---
+
+## מבנה <span dir="ltr">I/O</span> - סינכרוני מול אסינכרוני
+
+לאחר שתהליך מבקש <span dir="ltr">I/O</span>, יש שתי גישות עיקריות לטפל בבקשה:
+
+<ConceptCard
+  title="I/O סינכרוני"
+  englishTerm="Synchronous I/O"
+  description="התהליך חסום (blocked) עד שפעולת ה-I/O מסתיימת. פשוט לתכנת אבל לא יעיל - זמן המעבד של התהליך מתבזבז בהמתנה."
+/>
+
+<ConceptCard
+  title="I/O אסינכרוני"
+  englishTerm="Asynchronous I/O"
+  description="השליטה חוזרת לתהליך מיד אחרי התחלת הבקשה. התהליך יכול לבצע חישובים אחרים במקביל, ומוכר כשה-I/O מסתיים באמצעות Interrupt."
+  variant="success"
+/>
+
+<InteractiveDemo
+  title="Synchronous מול Asynchronous I/O"
+  explanation={
+    <>
+      <p>
+        בסינכרוני - התהליך <strong>חסום</strong> עד שה-I/O מסתיים, וזמן החישוב
+        הכולל הוא <span dir="ltr">T_io + T_compute</span>.
+      </p>
+      <p className="mt-2">
+        באסינכרוני - התהליך <strong>ממשיך לעבוד</strong>, והזמן הכולל הוא{' '}
+        <span dir="ltr">max(T_io, T_compute)</span> - חיסכון דרמטי.
+      </p>
+      <p className="mt-2">
+        הזיזו את הסליידר כדי לראות איך ההבדל בין שני המודים גדל כש-I/O ארוך.
+      </p>
+    </>
+  }
+>
+  <SyncVsAsyncIO />
+</InteractiveDemo>
+
+---
+
+## יחידות אחסון
+
+מערכת הפעלה מתחשבת כל הזמן בגדלים. כדאי להכיר את היחידות הבסיסיות:
+
+<table dir="rtl" className="w-full border-collapse text-sm">
+  <thead>
+    <tr className="border-b">
+      <th className="p-2 text-start font-semibold">יחידה</th>
+      <th className="p-2 text-start font-semibold">אנגלית</th>
+      <th className="p-2 text-start font-semibold">גודל</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr className="border-b"><td className="p-2">ביט</td><td className="p-2" dir="ltr">bit</td><td className="p-2" dir="ltr">0 or 1</td></tr>
+    <tr className="border-b"><td className="p-2">בית</td><td className="p-2" dir="ltr">byte</td><td className="p-2" dir="ltr">8 bits</td></tr>
+    <tr className="border-b"><td className="p-2">מילה</td><td className="p-2" dir="ltr">word</td><td className="p-2" dir="ltr">32 / 64 bits</td></tr>
+    <tr className="border-b"><td className="p-2" dir="ltr">KB</td><td className="p-2" dir="ltr">Kilobyte</td><td className="p-2" dir="ltr">2^10 = 1,024 bytes</td></tr>
+    <tr className="border-b"><td className="p-2" dir="ltr">MB</td><td className="p-2" dir="ltr">Megabyte</td><td className="p-2" dir="ltr">~10^6 bytes</td></tr>
+    <tr className="border-b"><td className="p-2" dir="ltr">GB</td><td className="p-2" dir="ltr">Gigabyte</td><td className="p-2" dir="ltr">~10^9 bytes</td></tr>
+    <tr className="border-b"><td className="p-2" dir="ltr">TB</td><td className="p-2" dir="ltr">Terabyte</td><td className="p-2" dir="ltr">~10^12 bytes</td></tr>
+    <tr><td className="p-2" dir="ltr">PB</td><td className="p-2" dir="ltr">Petabyte</td><td className="p-2" dir="ltr">~10^15 bytes</td></tr>
+  </tbody>
+</table>
+
+---
+
+## היררכיית התקני אחסון
+
+כל סוג אחסון מתאפיין בשלושה מדדים: **מהירות גישה**, **גודל**, ו**עלות לביט**.
+הכלל הבסיסי: ככל שמהיר יותר - יקר יותר, ולכן קטן יותר. המערכת משתמשת במגוון סוגי
+אחסון ויוצרת **היררכיה**:
+
+<InteractiveDemo
+  title="פירמידת היררכיית האחסון"
+  explanation={
+    <>
+      <p>
+        לחצו על כל שכבה בפירמידה כדי לראות את פרטיה: מהירות גישה, גודל טיפוסי,
+        עלות, ותכונת הנדיפות (האם המידע נשמר בכיבוי).
+      </p>
+      <p className="mt-2">
+        הפעלת <strong>Play</strong> תעבור אוטומטית על כל השכבות מלמעלה למטה.
+      </p>
+      <p className="mt-2">
+        הפעילו את <strong>הצג השוואה</strong> כדי לראות את כל הרמות יחד בגרף
+        ויזואלי.
+      </p>
+    </>
+  }
+>
+  <StorageHierarchyPyramid />
+</InteractiveDemo>
+
+נקודה חשובה: **נדיפות** (<span dir="ltr">volatile</span>) - זיכרון נדיף מאבד את
+התוכן שלו בכיבוי (<span dir="ltr">RAM</span>, <span dir="ltr">Cache</span>), ואילו
+אחסון מתמיד שומר את המידע (<span dir="ltr">SSD</span>, <span dir="ltr">HDD</span>,
+סרט).
+
+---
+
+## <span dir="ltr">DMA</span> - גישה ישירה לזיכרון
+
+<ConceptCard
+  title="גישה ישירה לזיכרון"
+  englishTerm="Direct Memory Access"
+  description="מנגנון שמאפשר להתקני I/O מהירים (דיסק, רשת, כרטיס מסך) להעביר נתונים ישירות אל/מהזיכרון הראשי - בלי שהמעבד יטפל בכל בייט. המעבד מקבל Interrupt רק כשההעברה כולה מסתיימת."
+  variant="success"
+/>
+
+הרווח: המעבד פנוי להריץ תהליכים אחרים בזמן שההעברה מתבצעת ברקע. בלי <span dir="ltr">DMA</span>,
+העברת קובץ של <span dir="ltr">1 GB</span> הייתה מקפיאה את המעבד לאלפי פסיקות.
+
+---
+
+## ארכיטקטורת המחשב - <span dir="ltr">von Neumann</span>
+
+מודל <span dir="ltr">von Neumann</span> הקלאסי מתאר את מחזור ביצוע הפקודה:
+
+1. **<span dir="ltr">Fetch</span>** — המעבד טוען את הפקודה הבאה מהזיכרון (על פי ה-<span dir="ltr">Program Counter</span>).
+2. **<span dir="ltr">Decode</span>** — הפקודה מפוענחת: איזו פעולה ואיזה אופרנדים.
+3. **<span dir="ltr">Execute</span>** — הפעולה מתבצעת, ייתכנו קריאות/כתיבות לזיכרון.
+4. **חזרה** — המחזור מתחיל מחדש עם הפקודה הבאה.
+
+כל מעבד מודרני מבצע את המחזור הזה **מיליארדי פעמים בשנייה**, עם אופטימיזציות
+(pipeline, out-of-order execution) שמאפשרות לבצע כמה פקודות במקביל.
+
+---
+
+## מערכות מרובות מעבדים
+
+<ConceptCard
+  title="Symmetric Multiprocessing"
+  englishTerm="SMP"
+  description="כל המעבדים שווי מעמד - כל אחד יכול לבצע כל משימה, וכולם חולקים את אותו זיכרון. זו הארכיטקטורה של מחשבים מודרניים: dual-core, quad-core, 8-core וכו'."
+/>
+
+<ConceptCard
+  title="Asymmetric Multiprocessing"
+  englishTerm="AMP"
+  description="מעבד ראשי (master) מנהל את העבודה ומקצה משימות למעבדי משנה (slaves). נפוץ פחות, משמש לעיתים במערכות משובצות ייעודיות."
+/>
+
+---
+
+## מבנה מערכת ההפעלה
+
+<ConceptCard
+  title="ריבוי-תוכניות"
+  englishTerm="Multiprogramming"
+  description="שמירה של מספר תוכניות בזיכרון כדי שהמעבד לא ישב בטל כשתוכנית אחת ממתינה ל-I/O. כשתוכנית אחת חוסמת - המתזמן עובר לאחרת מוכנה."
+/>
+
+<ConceptCard
+  title="חלוקת זמן"
+  englishTerm="Timesharing (Multitasking)"
+  description="המעבד מחליף בין תוכניות מהר מאוד (כל כמה אלפיות שנייה), כך שלמשתמש נראה שכולן רצות במקביל. זה מה שמאפשר להריץ Chrome, Spotify, VS Code ועוד בו-זמנית."
+  variant="info"
+/>
+
+<ConceptCard
+  title="זמן תגובה"
+  englishTerm="Response Time"
+  description="משך הזמן בין בקשת המשתמש להופעת התגובה הראשונה. במערכת Timesharing זמן תגובה קצר חשוב יותר מניצול מלא של המעבד."
+/>
+
+<ConceptCard
+  title="תזמון מעבד"
+  englishTerm="CPU Scheduling"
+  description="מנגנון ההחלטה איזה תהליך ירוץ בכל רגע. נרחיב על האלגוריתמים (FCFS, SJF, Round Robin) בהרצאה 2."
+/>
+
+<ConceptCard
+  title="החלפה"
+  englishTerm="Swapping"
+  description="העברת תהליכים מהזיכרון הראשי לדיסק כשאין מקום. ה-OS מחליף תהליכים פנימה והחוצה לפי הצורך."
+/>
+
+<ConceptCard
+  title="זיכרון וירטואלי"
+  englishTerm="Virtual Memory"
+  description="טכניקה שמאפשרת להריץ תוכניות גדולות מהזיכרון הפיזי, על ידי החלפה דינמית של חלקים ביניהם לבין הדיסק. נושא ההרצאה של פרק 5."
+/>
+
+---
+
+## פעולות <span dir="ltr">OS</span>
+
+מערכת ההפעלה היא **מערכת מונעת אירועים** (<span dir="ltr">interrupt-driven</span>).
+היא לא רצה ברצף - היא מגיבה לפסיקות:
+
+- **<span dir="ltr">Hardware interrupt</span>** — מגיעה מהתקן חיצוני (לחיצת מקש, חבילת רשת, סיום <span dir="ltr">I/O</span>).
+- **<span dir="ltr">Software interrupt / Trap</span>** — מגיעה מהתוכנה (<span dir="ltr">System Call</span>, חריגה כמו חלוקה באפס).
+
+במצב רגיל המעבד רץ באחד משני מצבים:
+
+<ConceptCard
+  title="מצב משתמש"
+  englishTerm="User Mode"
+  description="התוכנית של המשתמש רצה עם הרשאות מוגבלות: אסור לה לגשת ישירות לחומרה או לזיכרון של תהליכים אחרים."
+/>
+
+<ConceptCard
+  title="מצב גרעין"
+  englishTerm="Kernel Mode"
+  description="קוד מערכת ההפעלה רץ עם הרשאות מלאות. המעבר נעשה רק דרך System Call או Interrupt, אף פעם לא לבחירת התוכנית."
+  variant="warning"
+/>
+
+---
+
+## סביבות חישוב
+
+מערכות הפעלה שונות מותאמות למטרות שונות:
+
+- **מערכות בזמן אמת** (<span dir="ltr">Real-time embedded</span>) — רובוטים, רכב אוטונומי, מכשור רפואי. דורשות זמן תגובה מובטח.
+- **קוד פתוח** (<span dir="ltr">Open-source</span>) — <span dir="ltr">Linux</span>, <span dir="ltr">FreeBSD</span>. הקוד זמין לכולם, מתפתח באופן קהילתי.
+- **מערכות ענן** — <span dir="ltr">AWS</span>, <span dir="ltr">Azure</span>. מנוהלות באלפי שרתים מבוזרים.
+
+---
+
+## סיכום
+
+- מערכת ההפעלה היא **שכבת תיווך** בין החומרה והתוכנה, שמספקת נוחות ושומרת על שימוש נכון במשאבים.
+- התהליך של המחשב מתחיל ב-**Bootstrap** שטוען את הגרעין לזיכרון.
+- **Interrupts** הם המנגנון המרכזי של מערכת ההפעלה - כך היא מגיבה לאירועים.
+- **<span dir="ltr">I/O</span> אסינכרוני** משפר דרמטית את היעילות - התהליך לא נחסם לשווא.
+- **היררכיית האחסון** מאזנת בין מהירות, גודל ועלות באמצעות שילוב של טכנולוגיות שונות.
+- **<span dir="ltr">DMA</span>** משחרר את המעבד מהעברת נתונים בצובר.
+- **<span dir="ltr">Multiprogramming</span>** ו-**<span dir="ltr">Timesharing</span>** מנצלים את החומרה באופן אופטימלי ונותנים אשליה של הרצה מקבילית.
+
+בהרצאות הבאות נעמיק בכל אחד מהנושאים - נתחיל בתהליכים ובתזמון מעבד.
+
+</div>

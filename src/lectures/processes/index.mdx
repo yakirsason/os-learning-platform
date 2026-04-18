@@ -1,0 +1,568 @@
+import ConceptCard from '@/components/common/ConceptCard';
+import InteractiveDemo from '@/components/common/InteractiveDemo';
+import StudyCallout from '@/components/common/StudyCallout';
+import ProcessStateSimulator from './visualizations/ProcessStateSimulator';
+import ContextSwitchDemo from './visualizations/ContextSwitchDemo';
+import SchedulerQueuesExplorer from './visualizations/SchedulerQueuesExplorer';
+import ProcessCreationDemo from './visualizations/ProcessCreationDemo';
+
+<div dir="rtl">
+
+# תהליכים
+
+עד עכשיו דיברנו על מערכת הפעלה בכללי - מה היא עושה ואיך היא בנויה. עכשיו
+נכיר את **היחידה הבסיסית** שהיא מנהלת: **התהליך**. מה ההבדל בין תוכנית
+לתהליך? איך התהליך נראה בזיכרון? באילו מצבים הוא יכול להימצא? ואיך יוצרים
+אותו?
+
+<div className="my-6 grid gap-3 md:grid-cols-2">
+  <div className="rounded-lg border border-s-4 border-blue-500 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-950/30">
+    <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+      במה נעסוק
+    </div>
+    <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+      <li>• תוכנית מול תהליך</li>
+      <li>• מבנה תהליך בזיכרון + 5 מצבים</li>
+      <li>• PCB ו-Context Switch</li>
+      <li>• תורים ומתזמנים</li>
+      <li>• fork / exec / wait / exit</li>
+      <li>• מבוא ל-IPC</li>
+    </ul>
+  </div>
+  <div className="rounded-lg border border-s-4 border-amber-500 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
+    <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+      למה זה חשוב
+    </div>
+    <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+      <strong>התהליך הוא האבן הבסיסית</strong> של כל מה שנלמד הלאה. Scheduling,
+      Synchronization, Deadlocks, Memory Management - הכל מדבר על ניהול של
+      תהליכים. בלי להבין מה זה תהליך, אי אפשר להבין את שאר הקורס.
+    </p>
+  </div>
+</div>
+
+---
+
+## תוכנית מול תהליך
+
+זה המושג הראשון שחובה להבהיר, כי הוא נראה טריוויאלי אבל מבלבל הרבה סטודנטים.
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="תוכנית"
+    englishTerm="Program"
+    description="קובץ שמור בדיסק. פסיבי - לא עושה כלום. רק הוראות מכונה כתובות בזיכרון מתמיד. למשל: /usr/bin/firefox הוא תוכנית."
+    variant="info"
+  />
+  <ConceptCard
+    title="תהליך"
+    englishTerm="Process"
+    description="תוכנית בריצה. אקטיבי - יש לו מצב, זיכרון, registers, ערך PC. למשל: Firefox שפתוח כרגע על המסך שלך הוא תהליך."
+    variant="info"
+  />
+</div>
+
+הדרך הכי קלה לזכור את ההבדל: **תוכנית = מתכון לעוגה. תהליך = האפייה עצמה**.
+המתכון שוכב בספר ללא שינוי; האפייה דורשת תנור חם, חומרים, ושיפוט של הטבח.
+
+<StudyCallout variant="oneliner">
+  <strong>תוכנית</strong> = קובץ סטטי. <strong>תהליך</strong> = ריצה עם מצב וזיכרון. כשטוענים תוכנית ומפעילים אותה - היא הופכת לתהליך.
+</StudyCallout>
+
+### מאותה תוכנית - תהליכים שונים
+
+אפשר לפתוח **את אותו Firefox פעמיים**, ולקבל שני תהליכים שונים. שניהם רצים את
+אותו קוד, אבל לכל אחד יש:
+
+- stack משלו
+- heap משלו
+- data section משלו
+- מיקום שונה ב-PC
+
+אז הקוד זהה, אבל **המצב שונה**. לכן אלו באמת שני תהליכים נפרדים, לא אחד.
+
+---
+
+## תהליך בזיכרון
+
+כשתהליך רץ, הוא משתמש באזור זיכרון משלו. אזור הזיכרון מחולק לארבעה חלקים:
+
+<div dir="ltr" className="my-5 mx-auto max-w-sm overflow-hidden rounded-lg border-2 border-slate-300 dark:border-slate-700">
+  <div className="bg-purple-100 p-3 text-center text-sm dark:bg-purple-950/30">
+    <div className="font-bold text-purple-700 dark:text-purple-300">Stack</div>
+    <div className="text-[10px] text-purple-600 dark:text-purple-400" dir="rtl">משתנים מקומיים · פרמטרים · return address</div>
+  </div>
+  <div className="bg-slate-50 p-2 text-center text-[10px] text-slate-500 dark:bg-slate-900 dark:text-slate-400">↓ גדל כלפי מטה</div>
+  <div className="bg-slate-50 p-2 text-center text-[10px] text-slate-500 dark:bg-slate-900 dark:text-slate-400">↑ גדל כלפי מעלה</div>
+  <div className="bg-emerald-100 p-3 text-center text-sm dark:bg-emerald-950/30">
+    <div className="font-bold text-emerald-700 dark:text-emerald-300">Heap</div>
+    <div className="text-[10px] text-emerald-600 dark:text-emerald-400" dir="rtl">זיכרון מוקצה דינמית · malloc / new</div>
+  </div>
+  <div className="bg-blue-100 p-3 text-center text-sm dark:bg-blue-950/30">
+    <div className="font-bold text-blue-700 dark:text-blue-300">Data</div>
+    <div className="text-[10px] text-blue-600 dark:text-blue-400" dir="rtl">משתנים גלובליים · סטטיים</div>
+  </div>
+  <div className="bg-amber-100 p-3 text-center text-sm dark:bg-amber-950/30">
+    <div className="font-bold text-amber-700 dark:text-amber-300">Text</div>
+    <div className="text-[10px] text-amber-600 dark:text-amber-400" dir="rtl">קוד ההוראות - compiled instructions</div>
+  </div>
+</div>
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="Text Section"
+    englishTerm="Text / Code"
+    description="הקוד המהודר של התוכנית - ההוראות בשפת מכונה. אזור לקריאה בלבד (read-only) - כדי למנוע שינוי בשוגג של הקוד."
+  />
+  <ConceptCard
+    title="Data Section"
+    englishTerm="Data / BSS"
+    description="משתנים גלובליים וסטטיים. הגודל נקבע בזמן הקומפילציה ולא משתנה בזמן ריצה."
+  />
+  <ConceptCard
+    title="Heap"
+    englishTerm="Heap"
+    description="זיכרון שהתהליך מבקש בזמן ריצה דרך malloc/new. גדל וקטן דינמית. הוא האזור של הנתונים שאורכם לא ידוע מראש."
+  />
+  <ConceptCard
+    title="Stack"
+    englishTerm="Stack"
+    description="שמירת פרמטרים, משתנים מקומיים וכתובות חזרה בזמן קריאה לפונקציה. גדל כשקוראים לפונקציה, קטן כשמסיימים. משותף לכל התהליך (thread-specific במקרה של threads)."
+  />
+</div>
+
+### מה עוד שמור לתהליך?
+
+חוץ מהזיכרון, התהליך מחזיק גם:
+
+- **Program Counter (PC)** — הכתובת של ההוראה הבאה לביצוע.
+- **CPU registers** — ערכי הרגיסטרים (AX, BX, SP וכו') בכל רגע נתון.
+- **מידע על קבצים פתוחים, signals, עדיפויות, ועוד**.
+
+כל המידע הזה הוא ה-**state** של התהליך. מיד נראה איפה הוא נשמר - ב-PCB.
+
+---
+
+## חמשת מצבי התהליך
+
+בכל רגע נתון, התהליך נמצא באחד מחמישה מצבים. מעבר בין המצבים תמיד **נגרם
+מאירוע** - לא קורה סתם כך.
+
+<StudyCallout variant="exam" title="הליבה">
+  לשלושה מצבים יש שמות שיש לזכור בדיוק: <strong>Ready, Running, Waiting</strong>.
+  ה-<strong>New</strong> ו-<strong>Terminated</strong> הם מצבי גבול (התחלה וסוף). המעבר בין המצבים נגרם תמיד מ<strong>אירוע</strong> - לכן חשוב לא רק לזכור את השמות, אלא גם מה גורם לכל מעבר.
+</StudyCallout>
+
+### הדמיה: מחזור חיים מלא של תהליך
+
+**מה לראות:** עקבו אחרי התהליך עובר את כל חמשת המצבים - עם הסברים מה גרם לכל
+מעבר. שימו לב: הוא יכול להיות ב-Ready כמה פעמים, לא רק בהתחלה.
+
+**למה זה חשוב:** זו התשתית לכל הקורס. כל אלגוריתמי ה-scheduling שנלמד בהרצאה
+הבאה מדברים על "מתי להעביר תהליך מ-Ready ל-Running".
+
+<InteractiveDemo
+  title="5 מצבי תהליך ומעברים ביניהם"
+  explanation={
+    <>
+      <p>
+        המעבר בצבע אדום הוא הפעיל בכל רגע. התווית ליד החץ אומרת מה גרם לו -
+        admitted, dispatch, preempt, I/O wait וכו'.
+      </p>
+      <p className="mt-2">
+        לחצו Play כדי לראות את כל המחזור, או Next כדי ללמוד שלב-שלב.
+      </p>
+    </>
+  }
+>
+  <ProcessStateSimulator />
+</InteractiveDemo>
+
+<StudyCallout variant="pitfall" title="Waiting ≠ Ready">
+  שני המצבים האלה נשמעים דומה ומתבלבלים. <strong>Ready</strong> = התהליך
+  <em>יכול לרוץ</em>, רק מחכה שה-CPU יבחר בו.
+  <strong className="px-1">Waiting</strong> = התהליך
+  <em>לא יכול לרוץ</em>, הוא מחכה לאירוע חיצוני (I/O, signal). גם אם ה-CPU יהיה
+  פנוי עכשיו - הוא לא יכול לתת אותו לתהליך ב-Waiting.
+</StudyCallout>
+
+---
+
+## PCB - Process Control Block
+
+כשהמערכת מנהלת הרבה תהליכים בבת אחת, היא צריכה לזכור על כל אחד **את כל המידע
+הרלוונטי**. המבנה שמחזיק את המידע הזה הוא ה-PCB.
+
+<ConceptCard
+  title="Process Control Block"
+  englishTerm="PCB"
+  description="מבנה נתונים שה-OS שומר לכל תהליך. מכיל את כל המידע שצריך כדי להפסיק את התהליך באמצע ולחזור אליו אחר כך - בלי לאבד את המצב שלו."
+  variant="info"
+/>
+
+### מה שמור ב-PCB?
+
+<div className="my-4 grid gap-2 md:grid-cols-2">
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">Process State</div>
+    <div className="text-xs">באיזה מצב הוא כרגע? (Ready/Running/Waiting...)</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">Program Counter</div>
+    <div className="text-xs">לאיזו הוראה להמשיך כשנחזור להריץ אותו.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">CPU Registers</div>
+    <div className="text-xs">ערכי הרגיסטרים ברגע שנעצר.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">Scheduling Info</div>
+    <div className="text-xs">עדיפות, זמן שרץ, תור שהוא נמצא בו.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">Memory Info</div>
+    <div className="text-xs">כתובות התחלה וסוף של זיכרון, טבלת דפים (page table).</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">Accounting</div>
+    <div className="text-xs">כמה זמן CPU צרך, כמה זיכרון משתמש, etc.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">I/O Status</div>
+    <div className="text-xs">רשימת התקנים ש-open לתהליך, קבצים פתוחים.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 text-xs font-bold text-blue-600 dark:text-blue-400" dir="ltr">Open Files</div>
+    <div className="text-xs">טבלה של file descriptors ומצביעים לקבצים.</div>
+  </div>
+</div>
+
+<StudyCallout variant="remember">
+  אפשר לחשוב על ה-PCB כ<strong>תעודת זהות של התהליך</strong>. בכל רגע שה-OS צריך
+  מידע על תהליך מסוים - הוא ניגש ל-PCB שלו. כשתהליך נהרג - ה-PCB שלו מוסר.
+</StudyCallout>
+
+---
+
+## Context Switch
+
+תשאלו את עצמכם: איך ה-CPU מחליף בין תהליכים אם בכל רגע הוא יכול להריץ רק
+תהליך אחד? התשובה היא **Context Switch**.
+
+<ConceptCard
+  title="Context Switch"
+  englishTerm="Context Switch"
+  description="פעולה של שמירת המצב של התהליך הרץ וטעינת המצב של תהליך אחר. זה הטריק שמאפשר ל-OS להחליף בין תהליכים אלפי פעמים בשנייה - ולתת לנו אשליה של ריבוי משימות."
+  variant="info"
+/>
+
+### מה קורה בדיוק?
+
+1. **שמירה**: הרגיסטרים של ה-CPU מועתקים ל-PCB של התהליך הנוכחי.
+2. **בחירה**: ה-scheduler בוחר איזה תהליך יבוא הבא.
+3. **טעינה**: הרגיסטרים מועתקים מה-PCB של התהליך הנבחר אל ה-CPU.
+4. **המשך**: התהליך החדש מתחיל לרוץ מהנקודה שבה הוא עצר בעבר.
+
+### הדמיה: Context Switch בפעולה
+
+**מה לראות:** ה-register pills עפים מה-CPU אל PCB-1 (שמירה), ואז מ-PCB-2 אל
+ה-CPU (טעינה). המונה בתחתית סופר כמה זמן overhead הצטבר - זמן שה-CPU לא עשה עבודה
+משמעותית.
+
+**למה זה חשוב:** context switch הוא **overhead**. ככל שהמערכת עושה יותר context
+switches - פחות זמן יש לעבודה אמיתית. זה מה שעומד מאחורי רבות מההחלטות של
+ה-scheduler.
+
+<InteractiveDemo
+  title="Context Switch בין שני תהליכים"
+  explanation={
+    <>
+      <p>
+        עקבו אחרי הרגיסטרים עפים בין ה-CPU לבין ה-PCBs. שימו לב שה-overhead
+        מצטבר גם כשאף תהליך לא רץ.
+      </p>
+      <p className="mt-2">
+        במערכת אמיתית, context switch יכול לקחת בין כמה מיקרו-שניות לאלפיות
+        שנייה. לא הרבה - אבל כשזה קורה אלפי פעמים בשנייה, זה מצטבר.
+      </p>
+    </>
+  }
+>
+  <ContextSwitchDemo />
+</InteractiveDemo>
+
+<StudyCallout variant="exam" title="Context Switch הוא overhead">
+  זמן ה-context switch הוא <strong>זמן מבוזבז</strong> מנקודת מבט של עבודה
+  שימושית. ה-CPU עסוק בהעברת נתונים, לא בהרצת תוכנית משתמש. לכן אלגוריתמי
+  scheduling מנסים לא לעבור לתהליך אחר יותר מדי.
+</StudyCallout>
+
+---
+
+## תורים ומתזמנים
+
+ה-OS מחזיק **מספר תורים** של תהליכים, כל אחד לתפקיד שונה:
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <ConceptCard
+    title="Job Queue"
+    englishTerm="Job Queue"
+    description="תור של תהליכים שרצים להיכנס למערכת אבל עדיין לא הוקצו להם משאבי זיכרון. 'החדר המתנה'."
+  />
+  <ConceptCard
+    title="Ready Queue"
+    englishTerm="Ready Queue"
+    description="תור של תהליכים שמוכנים לרוץ על המעבד. ה-short-term scheduler בוחר מכאן מי הבא."
+  />
+  <ConceptCard
+    title="Device Queue"
+    englishTerm="Device Queue"
+    description="לכל התקן I/O יש תור משלו של תהליכים שמחכים לו. כשההתקן פנוי - הוא מטפל בראשון בתור."
+  />
+</div>
+
+### שלושה סוגי מתזמנים
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <ConceptCard
+    title="Short-term Scheduler"
+    englishTerm="CPU Scheduler"
+    description="מחליט מי ירוץ עכשיו על ה-CPU. בוחר מ-Ready Queue. פעיל מאוד - מתרחש עשרות עד מאות פעמים בשנייה."
+  />
+  <ConceptCard
+    title="Long-term Scheduler"
+    englishTerm="Job Scheduler"
+    description="מחליט אילו תהליכים להכניס מ-Job Queue ל-Ready Queue. נדיר יותר, קובע את 'degree of multiprogramming'."
+  />
+  <ConceptCard
+    title="Medium-term Scheduler"
+    englishTerm="Swapper"
+    description="מוציא זמנית תהליכים מהזיכרון ל-swap space (כשעמוס), ומחזיר אותם אחר כך. לא קיים בכל מערכת."
+  />
+</div>
+
+<StudyCallout variant="pitfall" title="short-term vs long-term">
+  <strong>Short-term</strong> = "מי ירוץ עכשיו?" - מהיר, תכוף.
+  <strong className="px-1">Long-term</strong> = "מי בכלל ייכנס למערכת?" - איטי, נדיר.
+  <br />
+  ההבדל הוא בתדירות ובקנה המידה של ההחלטה - לא באיזה אובייקט הם מנהלים.
+</StudyCallout>
+
+### הדמיה: מסע של תהליך דרך המערכת
+
+**מה לראות:** ה-token הסגול מסמל תהליך. עקבו אחריו עובר מ-Job Queue → Ready
+Queue → CPU, מדי פעם קופץ ל-Device Queue בזמן I/O, וחוזר. בסוף - מסתיים.
+
+**למה זה חשוב:** זה המבט הכללי על חיי התהליך. ההרצאה הבאה (Scheduling) תתמקד
+רק בחלק הצהוב (Ready Queue → CPU) - כעת חשוב להבין את התמונה הכללית.
+
+<InteractiveDemo
+  title="תורים ומתזמנים במערכת"
+  explanation={
+    <>
+      <p>
+        בכל שלב הדגשנו את החץ הפעיל ואת המתזמן האחראי עליו. שימו לב שיש המון
+        זמן שהתהליך <em>מחכה</em> - רק חלק מהזמן הוא רץ בפועל.
+      </p>
+      <p className="mt-2">
+        למטה: השוואה בין תהליך CPU-bound ל-I/O-bound. הפטרנים שונים, אבל
+        המבנה זהה.
+      </p>
+    </>
+  }
+>
+  <SchedulerQueuesExplorer />
+</InteractiveDemo>
+
+<StudyCallout variant="compare" title="CPU-bound vs I/O-bound">
+  <div className="space-y-1.5 text-xs">
+    <div><strong>CPU-bound:</strong> רוב הזמן על ה-CPU. I/O נדיר. דוגמאות: קומפילציה, חישוב מדעי.</div>
+    <div><strong>I/O-bound:</strong> רוב הזמן בהמתנה ל-I/O. CPU bursts קצרים. דוגמאות: שרת אינטרנט, עורך טקסט.</div>
+    <div className="mt-2 text-muted-foreground">רעיון חשוב: ה-scheduler אמור לאזן ביניהם, כדי שה-CPU וההתקנים יעבדו במקביל במקום לחכות זה לזה.</div>
+  </div>
+</StudyCallout>
+
+---
+
+## יצירת תהליכים
+
+עד עכשיו דיברנו על תהליך כאילו הוא קיים. אבל איך הוא נוצר בכלל? ב-UNIX יש
+ארבעה קריאות מערכת שצריך להכיר:
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="fork()"
+    englishTerm="fork()"
+    description="יוצר עותק מלא של התהליך הקורא. אחרי fork() יש שני תהליכים - parent ו-child - שרצים את אותו קוד. מחזיר ערך שונה לכל אחד: parent מקבל את ה-pid של ה-child, child מקבל 0."
+    variant="info"
+  />
+  <ConceptCard
+    title="exec()"
+    englishTerm="exec()"
+    description="מחליף את התמונה של התהליך הנוכחי בתוכנית חדשה. הזיכרון של התהליך נמחק, תוכנית חדשה נטענת במקום. ה-pid נשאר אותו, אבל הקוד שרץ שונה."
+    variant="info"
+  />
+  <ConceptCard
+    title="wait()"
+    englishTerm="wait()"
+    description="חוסם את התהליך הקורא עד שאחד מה-children שלו מסתיים. מחזיר את ה-exit status של ה-child. משמש פעמים רבות אחרי fork() כדי לחכות לתוצאה."
+    variant="info"
+  />
+  <ConceptCard
+    title="exit()"
+    englishTerm="exit()"
+    description="מסיים את התהליך הנוכחי עם exit code. המערכת משחררת את המשאבים שלו (בחלקם) ומודיעה ל-parent שלו."
+    variant="info"
+  />
+</div>
+
+<StudyCallout variant="exam" title="ערך ההחזרה של fork()">
+  זה הפריט הכי נשאל במבחנים. <strong>fork() מחזיר ערך שונה לכל אחד משני
+  התהליכים</strong>:
+  <br />
+  • אצל ה-parent: ה-pid של ה-child שנוצר (מספר חיובי)
+  <br />
+  • אצל ה-child: 0
+  <br />
+  <br />
+  זה מה שמאפשר לקוד להבדיל "אני ה-parent" מ"אני ה-child" - למרות שהקוד זהה.
+</StudyCallout>
+
+### הדמיה: fork / exec / wait / exit בקוד
+
+**מה לראות:** הקוד משמאל עם הדגשת השורה הפעילה. מימין: תהליכים פעילים עם
+pid, program שהם רצים, ו-status. עקבו איך fork() יוצר עותק, exec() מחליף את
+התוכנה, wait() חוסם את ה-parent, ו-exit() מנקה.
+
+**למה זה חשוב:** זה הדפוס הקלאסי של כל shell ב-UNIX. כשאתם כותבים `./program`
+ב-bash - ה-shell עצמו עושה בדיוק fork + exec + wait.
+
+<InteractiveDemo
+  title="יצירה וסיום תהליכים ב-UNIX"
+  explanation={
+    <>
+      <p>
+        שני התהליכים ממשיכים במקביל אחרי fork(). כל אחד קורא את <code dir="ltr">pid</code>{' '}
+        ומחליט על הבסיס הזה איזה מסלול לקחת.
+      </p>
+      <p className="mt-2">
+        למטה: הסברים קצרים על Zombie, Orphan ו-Cascading Termination - מצבי
+        קצה חשובים.
+      </p>
+    </>
+  }
+>
+  <ProcessCreationDemo />
+</InteractiveDemo>
+
+<StudyCallout variant="remember">
+  <strong>fork() מכפיל. exec() מחליף. wait() חוסם. exit() מנקה.</strong>
+  <br />
+  ארבע פעולות, כל אחת עם תפקיד יחיד - יחד הן מרכיבות את מחזור החיים של תהליך.
+</StudyCallout>
+
+<StudyCallout variant="pitfall" title="wait() חוסם את ה-Parent, לא את ה-Child">
+  טעות נפוצה: "wait חוסם את ה-child". לא נכון.
+  <strong> wait() חוסם את התהליך הקורא לו - שזה ה-parent.</strong> ה-child
+  לא מושפע בכלל - הוא ממשיך לרוץ/לסיים כרגיל. רק כשה-child מסיים, ה-wait משחרר
+  את ה-parent.
+</StudyCallout>
+
+---
+
+## IPC - תקשורת בין תהליכים
+
+תהליכים יכולים להיות:
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="תהליכים עצמאיים"
+    englishTerm="Independent"
+    description="לא משפיעים אחד על השני ולא תלויים זה בזה. דוגמה: Firefox ו-VS Code רצים במקביל אבל לא מדברים."
+  />
+  <ConceptCard
+    title="תהליכים משתפי פעולה"
+    englishTerm="Cooperating"
+    description="חולקים מידע או מתאמים פעילות. צריכים דרך לתקשר. למשל: תהליך שקורא רשת וכותב לדיסק ביחד עם תהליך שקורא את הדיסק ומציג למשתמש."
+  />
+</div>
+
+כדי שתהליכים ידברו, ה-OS מספק שני מודלים עיקריים של IPC:
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <div className="rounded-lg border-2 border-emerald-300 bg-emerald-50/60 p-4 dark:border-emerald-800 dark:bg-emerald-950/20">
+    <div className="mb-1 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">
+      Shared Memory
+    </div>
+    <div className="mb-2 text-sm font-semibold">זיכרון משותף</div>
+    <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-200">
+      שני תהליכים ניגשים לאותו אזור זיכרון. מהיר מאוד (קריאה/כתיבה ישירה), אבל
+      דורש <strong>סנכרון</strong> - אחרת שני התהליכים ידרסו אחד את השני.
+    </p>
+  </div>
+  <div className="rounded-lg border-2 border-blue-300 bg-blue-50/60 p-4 dark:border-blue-800 dark:bg-blue-950/20">
+    <div className="mb-1 text-xs font-bold uppercase text-blue-700 dark:text-blue-300">
+      Message Passing
+    </div>
+    <div className="mb-2 text-sm font-semibold">העברת הודעות</div>
+    <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-200">
+      תהליך אחד שולח הודעה, השני מקבל. ה-OS מתווך בין שניהם. איטי יותר (יש
+      העתקה), אבל <strong>אין דריסה</strong> - ולכן אין צורך בסנכרון מפורש.
+    </p>
+  </div>
+</div>
+
+<StudyCallout variant="compare" title="Shared Memory מול Message Passing">
+  <div className="space-y-1.5 text-xs">
+    <div><strong>מהירות:</strong> Shared Memory מהיר יותר (אין העתקה של ה-OS).</div>
+    <div><strong>תכנות:</strong> Message Passing פשוט יותר (אין סנכרון ידני).</div>
+    <div><strong>בין מחשבים:</strong> Message Passing יכול לעבוד גם ברשת.</div>
+    <div className="mt-2 text-muted-foreground">שתי הגישות קיימות. Shared Memory נפוץ בתכנות מקבילי בתוך מחשב אחד, Message Passing נפוץ במערכות מבוזרות.</div>
+  </div>
+</StudyCallout>
+
+### טעימה: Producer-Consumer
+
+הדוגמה הקלאסית של שני תהליכים משתפי פעולה: **Producer** (יוצר נתונים) ו-**Consumer**
+(צורך אותם). ביניהם יש **Bounded Buffer** - חוצץ בגודל מוגבל:
+
+- Producer שם פריטים בחוצץ.
+- Consumer לוקח פריטים מהחוצץ.
+- כש-Buffer מלא - Producer מחכה.
+- כש-Buffer ריק - Consumer מחכה.
+
+זו תחילת הסיפור - אבל הוא ייגמר בהרצאה 5 (סנכרון) כשנלמד איך עושים את זה
+**בצורה בטוחה**, בלי race conditions. לבינתיים, זכרו את התבנית.
+
+---
+
+## סיכום
+
+<div className="my-5 space-y-2 text-sm">
+  <div className="rounded-md border border-s-4 border-blue-500 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-950/30">
+    <strong>תוכנית מול תהליך:</strong> תוכנית = קובץ. תהליך = ריצה.
+  </div>
+  <div className="rounded-md border border-s-4 border-purple-500 bg-purple-50 p-3 dark:border-purple-700 dark:bg-purple-950/30">
+    <strong>זיכרון התהליך:</strong> Text + Data + Heap + Stack. כל תהליך עם סט משלו.
+  </div>
+  <div className="rounded-md border border-s-4 border-amber-500 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950/30">
+    <strong>5 מצבים:</strong> New / Ready / Running / Waiting / Terminated. כל מעבר נגרם מאירוע.
+  </div>
+  <div className="rounded-md border border-s-4 border-slate-500 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+    <strong>PCB:</strong> תעודת זהות של התהליך. ה-OS ניגש אליה בכל Context Switch.
+  </div>
+  <div className="rounded-md border border-s-4 border-emerald-500 bg-emerald-50 p-3 dark:border-emerald-700 dark:bg-emerald-950/30">
+    <strong>Context Switch:</strong> save old, load new. Overhead - זמן מבוזבז מנקודת מבט משתמש.
+  </div>
+  <div className="rounded-md border border-s-4 border-red-500 bg-red-50 p-3 dark:border-red-700 dark:bg-red-950/30">
+    <strong>fork / exec / wait / exit:</strong> יצירה, החלפת תוכנית, המתנה, סיום. הלב של UNIX.
+  </div>
+  <div className="rounded-md border border-s-4 border-violet-500 bg-violet-50 p-3 dark:border-violet-700 dark:bg-violet-950/30">
+    <strong>IPC:</strong> Shared Memory (מהיר, דורש סנכרון) או Message Passing (איטי, פשוט).
+  </div>
+</div>
+
+בהרצאה הבאה נצלול לחלק הכי עסוק של המערכת: **תזמון המעבד (CPU Scheduling)**.
+נכיר אלגוריתמים - FCFS, SJF, Round Robin, ועוד - ונבין את ה-tradeoffs ביניהם.
+
+</div>

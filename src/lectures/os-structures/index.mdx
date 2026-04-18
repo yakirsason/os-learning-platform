@@ -1,0 +1,552 @@
+import ConceptCard from '@/components/common/ConceptCard';
+import InteractiveDemo from '@/components/common/InteractiveDemo';
+import StudyCallout from '@/components/common/StudyCallout';
+import DualModeSimulator from './visualizations/DualModeSimulator';
+import OSArchitectureExplorer from './visualizations/OSArchitectureExplorer';
+import ParameterPassingDemo from './visualizations/ParameterPassingDemo';
+import PolicyMechanismDemo from './visualizations/PolicyMechanismDemo';
+
+<div dir="rtl">
+
+# מבני מערכות הפעלה
+
+בהרצאה הקודמת ראינו **מה** מערכת ההפעלה עושה. עכשיו נצלול ל-**איך היא בנויה
+בפנים**: אילו שירותים היא מספקת, איך מגיעים אליהם, ואילו דרכים שונות יש לארגן
+את הגרעין.
+
+<div className="my-6 grid gap-3 md:grid-cols-2">
+  <div className="rounded-lg border border-s-4 border-blue-500 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-950/30">
+    <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+      במה נעסוק
+    </div>
+    <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-200">
+      <li>• שירותי OS וממשקי משתמש</li>
+      <li>• Dual-Mode, System Calls ו-APIs</li>
+      <li>• Policy מול Mechanism</li>
+      <li>• חמישה מבני OS + Hybrid</li>
+    </ul>
+  </div>
+  <div className="rounded-lg border border-s-4 border-amber-500 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
+    <div className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+      למה זה חשוב
+    </div>
+    <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+      הבנת המבנה הפנימי של OS מסבירה <strong>למה</strong> מערכות שונות
+      מתנהגות אחרת - macOS, Linux ו-Windows בנויות על עקרונות שונים שמשפיעים
+      על יציבות, ביצועים וגמישות.
+    </p>
+  </div>
+</div>
+
+---
+
+## שירותי מערכת ההפעלה
+
+ה-OS מספק שתי קבוצות שירותים: חלק מיועד **למשתמש** (כדי שיוכל להפעיל תוכניות
+בנוחות) וחלק מיועד **לניהול המערכת** (כדי שהחומרה תנוצל היטב ותישמר יציבה).
+
+### שירותים למשתמש
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">User Interface</div>
+    <div className="text-sm">כל אינטראקציה - <span dir="ltr">CLI</span>, <span dir="ltr">GUI</span>, או מגע.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">Program Execution</div>
+    <div className="text-sm">טעינה, הפעלה וסיום של תוכניות.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">I/O Operations</div>
+    <div className="text-sm">גישה להתקנים ללא הכרת פרטי החומרה.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">File System</div>
+    <div className="text-sm">יצירה, קריאה, כתיבה ומחיקה של קבצים.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">Communications</div>
+    <div className="text-sm">IPC בין תהליכים, רשת בין מחשבים.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">Error Detection</div>
+    <div className="text-sm">זיהוי וטיפול בשגיאות חומרה/תוכנה/משתמש.</div>
+  </div>
+</div>
+
+### שירותים לניהול המערכת
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-amber-600 dark:text-amber-400">Resource Allocation</div>
+    <div className="text-sm">חלוקת מעבד, זיכרון וקבצים בין תהליכים.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-amber-600 dark:text-amber-400">Accounting</div>
+    <div className="text-sm">מעקב שימוש במשאבים - לחיוב ולאופטימיזציה.</div>
+  </div>
+  <div className="rounded-md border bg-card p-3">
+    <div className="mb-1 font-mono text-[10px] text-amber-600 dark:text-amber-400">Protection & Security</div>
+    <div className="text-sm">תהליך לא ניגש לזיכרון של אחר. הגנה גם מגורמים חיצוניים.</div>
+  </div>
+</div>
+
+<StudyCallout variant="oneliner">
+  מערכת הפעלה = <strong>מתווך</strong> בין אפליקציות לחומרה + <strong>מנהל משאבים</strong> + <strong>שומר סדר</strong>. כל השאר הוא פירוט.
+</StudyCallout>
+
+---
+
+## ממשקי משתמש
+
+ליד כל שירות, יש דרך ל"דבר" עם המערכת. יש שלוש שיטות עיקריות:
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <div className="rounded-lg border-2 bg-card p-4">
+    <div className="mb-1 text-xs font-bold uppercase text-slate-500">CLI</div>
+    <div className="mb-2 font-semibold">שורת פקודה</div>
+    <div className="text-xs text-slate-600 dark:text-slate-300">shell מפרש פקודות טקסט. <span dir="ltr">bash</span>, <span dir="ltr">zsh</span>, <span dir="ltr">PowerShell</span>.</div>
+  </div>
+  <div className="rounded-lg border-2 bg-card p-4">
+    <div className="mb-1 text-xs font-bold uppercase text-slate-500">GUI</div>
+    <div className="mb-2 font-semibold">ממשק גרפי</div>
+    <div className="text-xs text-slate-600 dark:text-slate-300">מטפורת שולחן העבודה - חלונות, אייקונים, עכבר. המצאה של <span dir="ltr">Xerox PARC</span>.</div>
+  </div>
+  <div className="rounded-lg border-2 bg-card p-4">
+    <div className="mb-1 text-xs font-bold uppercase text-slate-500">Touch</div>
+    <div className="mb-2 font-semibold">מגע</div>
+    <div className="text-xs text-slate-600 dark:text-slate-300">מובייל - מחוות, לחיצות, גלילה. דורש עיצוב שונה לחלוטין.</div>
+  </div>
+</div>
+
+**דוגמה - מה קורה כשמריצים <code dir="ltr">rm file.txt</code>?**
+
+1. המשתמש מקליד את הפקודה ב-<code dir="ltr">bash</code>.
+2. ה-shell מפרק: פקודה = <code dir="ltr">rm</code>, ארגומנט = <code dir="ltr">file.txt</code>.
+3. ה-shell טוען את <code dir="ltr">/usr/bin/rm</code> לזיכרון.
+4. <code dir="ltr">rm</code> מבצע <code dir="ltr">unlink("file.txt")</code> - קריאת מערכת.
+5. הגרעין מוחק את הכניסה של הקובץ ממערכת הקבצים.
+6. <code dir="ltr">rm</code> מסיים, השליטה חוזרת ל-shell.
+
+---
+
+## Dual-Mode Operation ⭐
+
+זה אחד המבנים החשובים ביותר בכל מערכת הפעלה מודרנית. הרעיון: **המעבד רץ תמיד
+באחד משני מצבים, עם רמות הרשאה שונות**.
+
+<StudyCallout variant="exam" title="הליבה בשורה">
+  המעבד שומר ביט אחד (<strong>Mode Bit</strong>) שקובע אם הוא רץ ב-User Mode
+  (הרשאות מוגבלות) או Kernel Mode (הרשאות מלאות). המעבר בין המצבים מתבצע{' '}
+  <strong>רק דרך Trap</strong> - תוכנית לא יכולה להחליט לבד לעבור ל-kernel.
+</StudyCallout>
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="מצב משתמש"
+    englishTerm="User Mode"
+    description="תוכנית רצה עם הרשאות מוגבלות. אסור לה לגשת ישירות לחומרה, לשנות את הגרעין, או לגשת לזיכרון של תהליך אחר."
+    variant="info"
+  />
+  <ConceptCard
+    title="מצב גרעין"
+    englishTerm="Kernel Mode"
+    description="קוד המערכת רץ עם הרשאות מלאות. יכול להפעיל כל הוראה כולל Privileged Instructions, לגשת לחומרה, ולשנות כל זיכרון."
+    variant="warning"
+  />
+</div>
+
+<ConceptCard
+  title="Mode Bit"
+  englishTerm="Mode Bit"
+  description="ביט אחד ברגיסטר סטטוס של המעבד שקובע את המצב הנוכחי: 1 = user mode, 0 = kernel mode. המעבד בודק אותו לפני כל הוראה privileged."
+/>
+
+<ConceptCard
+  title="Trap"
+  englishTerm="Trap (Software Interrupt)"
+  description="המנגנון היחיד של התהליך לעבור ל-kernel mode. ה-trap מאלץ את המעבד לקפוץ לקוד ידוע של המערכת ולהחליף את ה-mode bit."
+/>
+
+<StudyCallout variant="pitfall" title="Trap ≠ Interrupt">
+  קל להתבלבל: <strong>Interrupt</strong> זה אירוע מהחומרה (התקן חיצוני שולח אות),
+  בעוד <strong>Trap</strong> זה software interrupt שהתוכנית עצמה יוזמת דרך הוראה
+  מיוחדת. שניהם משתמשים באותו מנגנון של וקטור הפסיקות, אבל המקור שונה.
+</StudyCallout>
+
+### הדמיה: מעבר בין User Mode ל-Kernel Mode
+
+**מה לראות:** כש-<code dir="ltr">printf()</code> נהפך ל-<code dir="ltr">write()</code>,
+מעקב אחר ה-Mode Bit שמתחלף 1→0→1 ואחר התנועה של ה-token בין ה-lanes.
+
+**למה זה חשוב:** זו התשתית של כל הגנה וכל אבטחה במערכת. לחצו על כפתור הניסוי בתחתית כדי לראות מה קורה כשתוכנית מנסה להפעיל הוראה privileged מ-user mode.
+
+<InteractiveDemo
+  title="Dual-Mode בפעולה: printf() → write()"
+  explanation={
+    <>
+      <p>
+        עקבו אחרי ה-<strong>Mode Bit</strong> בפינת ה-diagram: הוא מחליף צבע
+        בדיוק כשה-trap מתבצע.
+      </p>
+      <p className="mt-2">
+        הכפתור בתחתית מדגים מה קורה כשתוכנית מפירה את החוקים.
+      </p>
+    </>
+  }
+>
+  <DualModeSimulator />
+</InteractiveDemo>
+
+<StudyCallout variant="exam" title="הוראות Privileged">
+  בפטור של הוראות privileged יש סימן הכרה במבחן: כל הוראה שמשפיעה על
+  <strong> חומרה, מצב המעבד, או זיכרון של תהליכים אחרים</strong> היא privileged.
+  כל הוראה שרק <strong>קוראת</strong> מידע (כמו השעון) - לא privileged.
+</StudyCallout>
+
+### פרויקט: אילו הוראות Privileged?
+
+<div className="my-5 grid gap-4 md:grid-cols-2" dir="rtl">
+  <div className="rounded-lg border-2 border-red-300 bg-red-50/50 p-4 dark:border-red-800 dark:bg-red-950/20">
+    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">!</span>
+      <span>Privileged - רק ב-Kernel</span>
+    </div>
+    <ul className="space-y-2 text-sm">
+      <li><strong dir="ltr">Clear memory</strong> — גישה לזיכרון של תהליכים אחרים</li>
+      <li><strong dir="ltr">Turn off interrupts</strong> — יכול להקפיא את כל המערכת</li>
+      <li><strong dir="ltr">Modify device-status table</strong> — מבני נתונים של הגרעין</li>
+      <li><strong dir="ltr">Access I/O device directly</strong> — חייב לעבור דרך System Call</li>
+    </ul>
+  </div>
+  <div className="rounded-lg border-2 border-emerald-300 bg-emerald-50/50 p-4 dark:border-emerald-800 dark:bg-emerald-950/20">
+    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-xs text-white">✓</span>
+      <span>מותר ב-User Mode</span>
+    </div>
+    <ul className="space-y-2 text-sm">
+      <li><strong dir="ltr">Read the clock</strong> — קריאה בלבד, לא מסוכנת</li>
+      <li><strong dir="ltr">Issue trap</strong> — זו בדיוק הדרך לעבור ל-kernel</li>
+      <li><strong dir="ltr">Switch to kernel mode</strong> — אוטומטי בתגובה ל-trap</li>
+    </ul>
+  </div>
+</div>
+
+---
+
+## System Calls
+
+<ConceptCard
+  title="קריאת מערכת"
+  englishTerm="System Call"
+  description="הממשק הפורמלי של תוכניות משתמש לשירותי ה-kernel. הדרך היחידה לבקש פעולה שדורשת הרשאות של kernel mode (I/O, יצירת תהליך, גישה לקובץ)."
+  variant="info"
+/>
+
+<StudyCallout variant="pitfall" title="API ≠ System Call">
+  <strong>API</strong> (Win32, POSIX, Java API) = שכבת הפשטה נוחה לתכנות -
+  פונקציות כמו <code dir="ltr">fopen</code>, <code dir="ltr">printf</code>.
+  <strong className="px-1">System Call</strong> = הקריאה הפיזית לגרעין דרך trap.
+  <br />
+  <br />
+  הזרימה: אפליקציה → API (ב-libc) → System Call → Kernel. הרבה קריאות API
+  מתורגמות לקריאת מערכת אחת, חלקן למספר, וחלק כלל לא.
+</StudyCallout>
+
+### ב-UNIX - דוגמאות נפוצות
+
+<table dir="ltr" className="my-4 w-full border-collapse text-sm">
+  <thead>
+    <tr className="border-b bg-muted">
+      <th className="p-2 text-start font-mono">syscall</th>
+      <th className="p-2 text-start">תיאור</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr className="border-b"><td className="p-2 font-mono">open / close</td><td className="p-2" dir="rtl">פתיחה וסגירה של קובץ</td></tr>
+    <tr className="border-b"><td className="p-2 font-mono">read / write</td><td className="p-2" dir="rtl">קריאה וכתיבה מ/אל קובץ</td></tr>
+    <tr className="border-b"><td className="p-2 font-mono">fork</td><td className="p-2" dir="rtl">יצירת תהליך חדש (עותק)</td></tr>
+    <tr className="border-b"><td className="p-2 font-mono">exec</td><td className="p-2" dir="rtl">החלפת התוכנית הנוכחית</td></tr>
+    <tr className="border-b"><td className="p-2 font-mono">wait</td><td className="p-2" dir="rtl">המתנה לסיום של תהליך בן</td></tr>
+    <tr className="border-b"><td className="p-2 font-mono">exit</td><td className="p-2" dir="rtl">סיום של התהליך הנוכחי</td></tr>
+    <tr><td className="p-2 font-mono">kill</td><td className="p-2" dir="rtl">שליחת signal לתהליך</td></tr>
+  </tbody>
+</table>
+
+<StudyCallout variant="compare" title="Windows מול UNIX">
+  <table dir="rtl" className="w-full text-xs">
+    <thead>
+      <tr className="border-b">
+        <th className="p-1.5 text-start">קטגוריה</th>
+        <th className="p-1.5 text-start">Windows</th>
+        <th className="p-1.5 text-start">UNIX</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr className="border-b"><td className="p-1.5">Process</td><td className="p-1.5 font-mono" dir="ltr">CreateProcess()</td><td className="p-1.5 font-mono" dir="ltr">fork() + exec()</td></tr>
+      <tr className="border-b"><td className="p-1.5">Files</td><td className="p-1.5 font-mono" dir="ltr">CreateFile()</td><td className="p-1.5 font-mono" dir="ltr">open()</td></tr>
+      <tr className="border-b"><td className="p-1.5">Devices</td><td className="p-1.5 font-mono" dir="ltr">SetConsoleMode()</td><td className="p-1.5 font-mono" dir="ltr">ioctl()</td></tr>
+      <tr className="border-b"><td className="p-1.5">Info</td><td className="p-1.5 font-mono" dir="ltr">GetCurrentProcessID()</td><td className="p-1.5 font-mono" dir="ltr">getpid()</td></tr>
+      <tr className="border-b"><td className="p-1.5">Communication</td><td className="p-1.5 font-mono" dir="ltr">CreatePipe()</td><td className="p-1.5 font-mono" dir="ltr">pipe()</td></tr>
+      <tr><td className="p-1.5">Protection</td><td className="p-1.5 font-mono" dir="ltr">SetFileSecurity()</td><td className="p-1.5 font-mono" dir="ltr">chmod()</td></tr>
+    </tbody>
+  </table>
+</StudyCallout>
+
+### דוגמה: <span dir="ltr">printf → write</span>
+
+כשמפעילים <code dir="ltr">printf("Hello")</code>:
+1. <code dir="ltr">printf()</code> ב-<code dir="ltr">libc</code> מפרק את ה-format string.
+2. הוא קורא ל-<code dir="ltr">write(1, "Hello", 5)</code> - קריאת מערכת ל-STDOUT.
+3. <code dir="ltr">write()</code> מפעיל trap → מעבר ל-kernel mode.
+4. הגרעין מעתיק את המחרוזת ל-buffer של הטרמינל.
+5. השליטה חוזרת ל-<code dir="ltr">printf</code>, שחוזר לקוד המשתמש.
+
+### הדמיה: שלוש שיטות להעברת פרמטרים
+
+**מה לראות:** איך כל שיטה מעבירה את fd, buf ו-count מהתהליך לגרעין - ואיזו
+מגבלה יש לכל אחת.
+
+**למה זה חשוב:** מערכות הפעלה שונות בחרו שיטות שונות. Linux ו-Solaris משתמשות
+ב-Block/Table כי אין לה מגבלה על מספר פרמטרים.
+
+<InteractiveDemo
+  title="שלוש שיטות להעביר פרמטרים ל-System Call"
+  explanation={
+    <>
+      <p>
+        החליפו בין הלשוניות כדי לראות את ההבדלים: <strong>Registers</strong>{' '}
+        מהיר אך מוגבל, <strong>Block/Table</strong> גמיש, <strong>Stack</strong>{' '}
+        נפוץ ונוח.
+      </p>
+      <p className="mt-2">
+        שימו לב לזרימה של ה-param pills - Framer Motion מעביר אותם חלקית בין
+        המיקומים.
+      </p>
+    </>
+  }
+>
+  <ParameterPassingDemo />
+</InteractiveDemo>
+
+---
+
+## System Programs
+
+תוכניות שמגיעות עם המערכת ומספקות סביבת הפעלה נוחה - **אך אינן חלק מהגרעין**.
+רצות ב-user mode כמו כל תוכנית אחרת.
+
+<div className="my-4 grid gap-2 md:grid-cols-4">
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">ניהול קבצים<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">cp, mv, rm, ls</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">מידע סטטוס<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">date, ps, df, top</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">עריכת קבצים<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">vi, nano, notepad</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">שפות תכנות<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">gcc, python, node</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">טעינה והרצה<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">loaders, linkers</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">תקשורת<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">ssh, ping, curl</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">Daemons<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">sshd, cron, systemd</span></div>
+  <div className="rounded-md border bg-card p-2.5 text-center text-xs">יישומים<br /><span dir="ltr" className="font-mono text-[10px] text-muted-foreground">Chrome, VS Code</span></div>
+</div>
+
+---
+
+## Policy vs Mechanism ⭐
+
+אחת ההפרדות החשובות בעיצוב מערכות הפעלה - **מה** לעשות מופרד מ-**איך** לעשות.
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="מנגנון"
+    englishTerm="Mechanism"
+    description="ה'איך' - הכלים והמבנים שמאפשרים לבצע פעולה. קבוע, יציב, לרוב בחומרה."
+    variant="info"
+  />
+  <ConceptCard
+    title="מדיניות"
+    englishTerm="Policy"
+    description="ה'מה' - ההחלטה מתי ואיך להשתמש במנגנון. יכולה להשתנות מאתר לאתר, ממשתמש למשתמש."
+    variant="info"
+  />
+</div>
+
+<StudyCallout variant="oneliner">
+  <strong>Timer</strong> הוא מנגנון: החומרה יודעת לצלצל אחרי N ms.
+  <strong className="px-1">Quantum</strong> הוא מדיניות: ה-OS מחליט כמה זמן
+  לתת לכל תהליך. שינוי quantum → התנהגות שונה, אבל אותו timer.
+</StudyCallout>
+
+### הדמיה: Policy מול Mechanism בפעולה
+
+**מה לראות:** ה-timer (מנגנון) מתקתק ללא הפסקה על צד ימין. ה-quantum (מדיניות)
+נקבע על ידי הסליידר בצד שמאל. כשמשנים את ה-quantum - דפוס ה-Gantt משתנה, אבל
+ה-timer בדיוק כמו שהיה.
+
+**למה זה חשוב:** הפרדה נכונה בין policy ל-mechanism מאפשרת להחליף policy
+(לדוגמה, לעבור מ-Round Robin ל-Priority Scheduling) בלי לשנות את הגרעין.
+
+<InteractiveDemo
+  title="Timer (מנגנון) ו-Quantum (מדיניות)"
+  explanation={
+    <>
+      <p>
+        הזיזו את הסליידר ב"Policy" - תראו שה-Gantt משתנה. התבוננו בצד ה-"Mechanism":
+        התקתוק לא משתנה.
+      </p>
+      <p className="mt-2">
+        זה בדיוק הרעיון - המנגנון יציב, המדיניות גמישה.
+      </p>
+    </>
+  }
+>
+  <PolicyMechanismDemo />
+</InteractiveDemo>
+
+<StudyCallout variant="exam">
+  דוגמאות נוספות לניתוח בהרצאה: <strong>Mechanism:</strong> בקשת Page מהדיסק.
+  <strong className="px-1">Policy:</strong> איזה page להוציא החוצה (LRU? FIFO? Clock?). נראה
+  את זה בהרחבה בהרצאה על Virtual Memory.
+</StudyCallout>
+
+---
+
+## מבני מערכות הפעלה ⭐
+
+יש שישה מבנים אדריכליים עיקריים. כל אחד מפשר בין **פשטות, ביצועים, אמינות
+וגמישות** בצורה שונה.
+
+<StudyCallout variant="compare" title="5 המבנים הקלאסיים">
+  <div className="space-y-1.5 text-xs">
+    <div><strong>Simple</strong> — הכל ברמה אחת. <span className="text-muted-foreground">(MS-DOS)</span></div>
+    <div><strong>Monolithic</strong> — גרעין ענק אחד. <span className="text-muted-foreground">(UNIX מסורתי)</span></div>
+    <div><strong>Layered</strong> — שכבות, כל אחת משתמשת רק בתחתונה ממנה. <span className="text-muted-foreground">(THE System)</span></div>
+    <div><strong>Microkernel</strong> — kernel קטן + שירותים ב-user space. <span className="text-muted-foreground">(Mach, QNX)</span></div>
+    <div><strong>Modular</strong> — kernel בסיסי + modules טעינים דינמית. <span className="text-muted-foreground">(Linux LKM)</span></div>
+  </div>
+</StudyCallout>
+
+### הדמיה: חמישה מבנים, אותה בקשה
+
+**מה לראות:** כיצד בקשה של <code dir="ltr">read()</code> זורמת דרך כל מבנה.
+שימו לב לאורך הנתיב ולנקודות החולשה השונות.
+
+**למה זה חשוב:** זה מסביר למה macOS יציב (microkernel core) אבל פחות מהיר
+מ-Linux (modular monolithic). בחירות אדריכליות = tradeoffs אמיתיים.
+
+<InteractiveDemo
+  title="חמישה מבני OS - זרימת בקשה"
+  explanation={
+    <>
+      <p>
+        עברו בין הלשוניות כדי לראות את כל המבנים. לפאנל הצד יש יתרונות,
+        חסרונות ודוגמאות מהעולם האמיתי.
+      </p>
+    </>
+  }
+>
+  <OSArchitectureExplorer />
+</InteractiveDemo>
+
+### Hybrid - מה שבאמת קיים היום
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <ConceptCard
+    title="macOS"
+    englishTerm="Darwin"
+    description="Mach microkernel (בסיסי) + BSD UNIX מעליו + ספריות cocoa. יציבות של microkernel עם ביצועים של monolithic."
+  />
+  <ConceptCard
+    title="Windows"
+    englishTerm="NT Kernel"
+    description="גרעין monolithic עם אלמנטים של microkernel (subsystems). תומך ב-Win32, POSIX, OS/2."
+  />
+  <ConceptCard
+    title="iOS / Android"
+    englishTerm="Mobile Hybrid"
+    description="iOS מבוסס Darwin. Android = Linux kernel + Android runtime. שניהם hybrid."
+  />
+</div>
+
+<StudyCallout variant="remember">
+  המבנים הקלאסיים הם <strong>תבניות מלמד</strong> - כדי להבין מושגים. כל מערכת
+  אמיתית היום היא <strong>Hybrid</strong>, שמשלבת כמה גישות לפי מה שהאזור
+  הספציפי צריך.
+</StudyCallout>
+
+---
+
+## מכונות וירטואליות
+
+<div className="my-4 grid gap-3 md:grid-cols-3">
+  <ConceptCard
+    title="Virtual Machine"
+    englishTerm="VM"
+    description="שכבת תוכנה שמדמה מחשב שלם - CPU, זיכרון, I/O. OS 'אורחת' רצה בתוכה כאילו על חומרה פיזית."
+    variant="info"
+  />
+  <ConceptCard
+    title="Host / Guest"
+    englishTerm="Host / Guest"
+    description="Host = המערכת הבסיסית. Guest = המערכת בתוך ה-VM. למשל Windows (host) מריץ Ubuntu (guest) ב-VirtualBox."
+  />
+  <ConceptCard
+    title="JVM"
+    englishTerm="Java Virtual Machine"
+    description="VM של bytecode במקום של חומרה. מאפשר 'write once, run anywhere' - אותה תוכנית על Windows, macOS, Linux."
+  />
+</div>
+
+---
+
+## Debugging ו-Performance Tuning
+
+<div className="my-4 grid gap-3 md:grid-cols-2">
+  <ConceptCard
+    title="Log Files"
+    englishTerm="Log Files"
+    description="תיעוד אירועים - שגיאות, מידע, פעילות משתמשים. הכלי הבסיסי לחקירה."
+  />
+  <ConceptCard
+    title="Core / Crash Dump"
+    englishTerm="Memory Dumps"
+    description="Core dump = זיכרון של תהליך שקרס. Crash dump = זיכרון של ה-kernel (BSOD ב-Windows)."
+  />
+  <ConceptCard
+    title="Profiling"
+    englishTerm="Profiling"
+    description="מדידה איזה חלק צורך הכי הרבה זמן/משאבים. בסיס לאופטימיזציה ממוקדת."
+  />
+</div>
+
+<StudyCallout variant="remember" title="חוק קרניגן">
+  <em dir="ltr">Debugging is twice as hard as writing the code in the first place.
+  Therefore, if you write the code as cleverly as possible, you are, by
+  definition, not smart enough to debug it.</em>
+  <br />
+  <br />
+  בעברית: כתיבת קוד פשוט מפשטת את החקירה. חכמה יתר על המידה = עונש בדיבאג.
+</StudyCallout>
+
+---
+
+## סיכום
+
+<div className="my-5 space-y-2 text-sm">
+  <div className="rounded-md border border-s-4 border-blue-500 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-950/30">
+    <strong>שירותים:</strong> ה-OS מספק שירותים למשתמש (UI, execution, I/O, files) ולניהול (resources, accounting, protection).
+  </div>
+  <div className="rounded-md border border-s-4 border-amber-500 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950/30">
+    <strong>Dual-Mode:</strong> הפרדה בין user mode (מוגבל) ל-kernel mode (הרשאות מלאות). מעבר רק דרך <strong>Trap</strong>.
+  </div>
+  <div className="rounded-md border border-s-4 border-violet-500 bg-violet-50 p-3 dark:border-violet-700 dark:bg-violet-950/30">
+    <strong>System Calls:</strong> ה-API הפורמלי של הגרעין. פרמטרים ברגיסטרים, בטבלה, או בערימה.
+  </div>
+  <div className="rounded-md border border-s-4 border-emerald-500 bg-emerald-50 p-3 dark:border-emerald-700 dark:bg-emerald-950/30">
+    <strong>Policy vs Mechanism:</strong> הפרדה בין "איך" (יציב) ל-"מה" (גמיש). חוסכת שכתובים כשהמדיניות משתנה.
+  </div>
+  <div className="rounded-md border border-s-4 border-red-500 bg-red-50 p-3 dark:border-red-700 dark:bg-red-950/30">
+    <strong>מבני OS:</strong> Simple / Monolithic / Layered / Microkernel / Modular. מערכות אמיתיות - Hybrid.
+  </div>
+</div>
+
+בהרצאה הבאה נצלול לעומק רכיב בסיסי: **תהליכים ו-Threads**.
+
+</div>

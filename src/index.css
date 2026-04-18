@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn tokens (light) */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 217 91% 60%;
+    --radius: 0.5rem;
+
+    /* פלטת צבעים סמנטית */
+    --color-primary: #3b82f6;
+    --color-success: #22c55e;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+
+    /* צבעי מצבי תהליך - יציבים בכל האתר */
+    --color-state-new: #64748b;
+    --color-state-ready: #3b82f6;
+    --color-state-running: #22c55e;
+    --color-state-waiting: #f59e0b;
+    --color-state-terminated: #6b7280;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217 91% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  code,
+  pre,
+  kbd {
+    @apply font-mono;
+  }
+}
+
+/* עיצוב תוכן MDX של ההרצאות - ממוקד לתוכן הישיר של ה-article,
+   לא נוגע בקומפוננטות פנימיות (ConceptCard, InteractiveDemo וכו'). */
+@layer components {
+  .prose > div > h1 {
+    @apply mb-6 mt-2 text-3xl font-bold leading-tight text-slate-900 dark:text-slate-50;
+  }
+  .prose > div > h2 {
+    @apply mb-4 mt-10 text-2xl font-semibold text-slate-900 dark:text-slate-50;
+  }
+  .prose > div > h3 {
+    @apply mb-3 mt-6 text-lg font-semibold;
+  }
+  .prose > div > p {
+    @apply mb-4 leading-relaxed text-slate-700 dark:text-slate-300;
+  }
+  .prose > div > ul,
+  .prose > div > ol {
+    @apply mb-4 space-y-1.5 ps-6;
+  }
+  .prose > div > ul {
+    @apply list-disc marker:text-slate-400;
+  }
+  .prose > div > ol {
+    @apply list-decimal;
+  }
+  .prose > div > ul > li,
+  .prose > div > ol > li {
+    @apply leading-relaxed text-slate-700 dark:text-slate-300;
+  }
+  .prose > div > hr {
+    @apply my-8 border-border;
+  }
+  .prose > div > p strong,
+  .prose > div > ul strong,
+  .prose > div > ol strong {
+    @apply font-semibold text-slate-900 dark:text-slate-50;
+  }
+  .prose > div > table {
+    @apply mb-6 w-full border-collapse overflow-hidden rounded-md border border-border text-sm;
+  }
+  .prose > div > table th {
+    @apply bg-muted;
+  }
+  .prose > div > table td {
+    @apply border-t border-border;
+  }
+}
+

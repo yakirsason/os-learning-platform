@@ -34,6 +34,14 @@ export default function CriticalSectionPage() {
         </p>
       </div>
 
+      <StudyCallout variant="compare" title="Race Condition מול Critical Section">
+        <p className="m-0">
+          <strong>Race condition</strong> היא התקלה: התוצאה תלויה בסדר הריצה המדויק.
+          <br />
+          <strong>Critical section problem</strong> היא בעיית התכנון: איך מונעים מכמה תהליכים להיכנס יחד לקוד שנוגע במשאב משותף.
+        </p>
+      </StudyCallout>
+
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-50">
           מבנה תהליך עם Critical Section

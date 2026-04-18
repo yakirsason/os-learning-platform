@@ -134,6 +134,12 @@ export default function BoundedBufferPage() {
         </p>
       </div>
 
+      <StudyCallout variant="pitfall" title="mutex לא סופר מקומות">
+        <span dir="ltr" className="font-mono">mutex</span> רק מגן על הגישה לחוצץ עצמו.
+        את השאלה "יש מקום פנוי?" בודק <span dir="ltr" className="font-mono">empty</span>,
+        ואת השאלה "יש פריט לצרוך?" בודק <span dir="ltr" className="font-mono">full</span>.
+      </StudyCallout>
+
       <StudyCallout variant="exam">
         תמיד: <span dir="ltr">wait(empty/full)</span> לפני <span dir="ltr">wait(mutex)</span>.
         הסמאפורים של ספירה (empty, full) מגיעים לפני הmutex — לא הפוך.

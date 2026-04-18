@@ -58,6 +58,14 @@ export default function SemaphoresPage() {
         />
       </div>
 
+      <StudyCallout variant="compare" title="Binary מול Counting Semaphore">
+        <p className="m-0">
+          <strong>Binary semaphore</strong> מתאים לשאלה "מותר רק לאחד להיכנס?" ולכן לרוב נראה כמו mutex.
+          <br />
+          <strong>Counting semaphore</strong> מתאים לשאלה "כמה יחידות משאב פנויות?" כמו מקומות בחוצץ, מדפסות או חיבורים.
+        </p>
+      </StudyCallout>
+
       <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
         <div className="mb-2 text-sm font-semibold text-blue-800 dark:text-blue-300">
           דוגמה: תיאום סדר ביצוע
@@ -151,6 +159,15 @@ export default function SemaphoresPage() {
           </div>
         </div>
       </div>
+
+      <StudyCallout variant="compare" title="Busy waiting מול Blocking">
+        <p className="m-0">
+          <strong>Busy waiting</strong>: התהליך נשאר רץ ובודק שוב ושוב, ולכן מבזבז CPU.
+          <br />
+          <strong>Blocking</strong>: התהליך עובר לתור המתנה וה-CPU פנוי לתהליכים אחרים. הוא יתעורר רק אחרי
+          <span dir="ltr" className="font-mono"> signal()</span>.
+        </p>
+      </StudyCallout>
 
       <StudyCallout variant="exam">
         חשוב למבחן: <br />

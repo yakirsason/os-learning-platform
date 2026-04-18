@@ -10,7 +10,8 @@ export type SyncPageSlug =
   | 'bounded-buffer'
   | 'readers-writers'
   | 'dining-philosophers'
-  | 'monitors';
+  | 'monitors'
+  | 'practice';
 
 export interface SyncPageInfo {
   slug: SyncPageSlug;

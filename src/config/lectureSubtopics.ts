@@ -71,6 +71,13 @@ export const SYNCHRONIZATION_SUBTOPICS: LectureSubtopic[] = [
     description: 'מבנה ברמה גבוהה שמפשט סנכרון ומקטין טעויות.',
     group: 'advanced',
   },
+  {
+    id: 'practice',
+    title: 'תרגול',
+    englishTitle: 'Practice',
+    description: '10 שאלות אמריקאיות קצרות לתרגול לפני מבחן.',
+    group: 'practice',
+  },
 ];
 
 export const SCHEDULING_SUBTOPICS: LectureSubtopic[] = [

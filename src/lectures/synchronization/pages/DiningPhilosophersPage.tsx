@@ -104,6 +104,14 @@ export default function DiningPhilosophersPage() {
         </div>
       </div>
 
+      <StudyCallout variant="compare" title="Deadlock מול Starvation">
+        <p className="m-0">
+          <strong>Deadlock</strong>: קבוצה של תהליכים תקועה יחד, וכל אחד מחכה למשאב שמוחזק על ידי אחר בקבוצה.
+          <br />
+          <strong>Starvation</strong>: תהליך אחד יכול להמשיך להידחות שוב ושוב, גם אם המערכת כולה עדיין מתקדמת.
+        </p>
+      </StudyCallout>
+
       <StudyCallout variant="pitfall">
         פתרון ל-deadlock לא אוטומטית מונע רעב (starvation). אפשר שאחד הפילוסופים לעולם לא יאכל גם בלי deadlock — אם תמיד שכניו "מקדימים" אותו.
       </StudyCallout>

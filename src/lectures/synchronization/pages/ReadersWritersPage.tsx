@@ -129,6 +129,12 @@ export default function ReadersWritersPage() {
         </p>
       </div>
 
+      <StudyCallout variant="remember" title="הקורא הראשון והאחרון">
+        רק הקורא הראשון נועל את <span dir="ltr" className="font-mono">wrt</span>, ורק הקורא האחרון משחרר אותו.
+        כל הקוראים שבאמצע רק מעדכנים את <span dir="ltr" className="font-mono">readcount</span>.
+        זו הסיבה שכותב חסום כל עוד יש לפחות קורא פעיל אחד.
+      </StudyCallout>
+
       <section className="w-full min-w-0 space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
         <header className="space-y-1">
           <h3 className="m-0 text-base font-semibold text-slate-950 dark:text-slate-50">

@@ -27,8 +27,11 @@ export default function PetersonPage() {
               int turn;
             </div>
             <p className="m-0 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-              מציין <em>מי מותר לו</em> להיכנס ל-critical section עכשיו.
-              אם <span dir="ltr" className="font-mono">turn == i</span> — תהליך P<sub>i</sub> מוזמן להיכנס.
+              משמש כשובר-שוויון כאשר שני התהליכים רוצים להיכנס ל-critical section יחד.
+              אם <span dir="ltr" className="font-mono">turn == i</span>, ל-P<sub>i</sub> יש קדימות רק במצב התחרות הזה.
+            </p>
+            <p className="m-0 mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+              במילים אחרות: <span dir="ltr" className="font-mono">turn</span> הוא שובר-שוויון, לא מנעול עצמאי.
             </p>
           </div>
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
@@ -42,6 +45,12 @@ export default function PetersonPage() {
           </div>
         </div>
       </div>
+
+      <StudyCallout variant="pitfall" title="מה turn באמת עושה">
+        <span dir="ltr" className="font-mono">turn</span> אינו lock ואינו אומר לבד "מי בפנים".
+        הוא משפיע רק כאשר שני הדגלים דולקים, כלומר כששני התהליכים רוצים להיכנס יחד. אם התהליך השני לא רוצה להיכנס,
+        <span dir="ltr" className="font-mono"> flag[j] == false</span> מספיק כדי ש-P<sub>i</sub> יתקדם מיד.
+      </StudyCallout>
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-50">האלגוריתם</h2>

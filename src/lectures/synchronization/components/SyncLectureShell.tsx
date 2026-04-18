@@ -11,6 +11,7 @@ import BoundedBufferPage from '../pages/BoundedBufferPage';
 import ReadersWritersPage from '../pages/ReadersWritersPage';
 import DiningPhilosophersPage from '../pages/DiningPhilosophersPage';
 import MonitorsPage from '../pages/MonitorsPage';
+import PracticePage from '../pages/PracticePage';
 
 const PAGE_COMPONENTS: Record<SyncPageSlug, ComponentType> = {
   overview: OverviewPage,
@@ -23,6 +24,7 @@ const PAGE_COMPONENTS: Record<SyncPageSlug, ComponentType> = {
   'readers-writers': ReadersWritersPage,
   'dining-philosophers': DiningPhilosophersPage,
   monitors: MonitorsPage,
+  practice: PracticePage,
 };
 
 export default function SyncLectureShell() {

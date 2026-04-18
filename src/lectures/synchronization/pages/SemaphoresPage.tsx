@@ -1,6 +1,7 @@
 import ConceptCard from '@/components/common/ConceptCard';
 import StudyCallout from '@/components/common/StudyCallout';
 import PageShell from '../components/PageShell';
+import SemaphoreSimulator from '../visualizations/SemaphoreSimulator';
 
 export default function SemaphoresPage() {
   return (
@@ -157,6 +158,20 @@ export default function SemaphoresPage() {
         2. הפעולות חייבות להיות אטומיות — ה-OS מבטיח זאת. <br />
         3. ב-blocking semaphore: ערך שלילי = מספר התהליכים הממתינים.
       </StudyCallout>
+
+      <section className="w-full min-w-0 space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+        <header className="space-y-1">
+          <h3 className="m-0 text-base font-semibold text-slate-950 dark:text-slate-50">
+            הדמיה: סמאפור עם תור חסימה
+          </h3>
+          <p className="m-0 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            <strong>מה לעקוב אחריו:</strong> ערך הסמאפור (<span dir="ltr" className="font-mono">S.value</span>),
+            התור הוויזואלי, ומצב כל תהליך — מוכן, בקטע הקריטי, חסום או סיים.
+            התרחיש "עם תור" מציג את ההבדל המרכזי מ-busy waiting: אין בזבוז CPU, רק ערך שלילי + תור FIFO.
+          </p>
+        </header>
+        <SemaphoreSimulator />
+      </section>
     </PageShell>
   );
 }

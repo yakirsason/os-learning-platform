@@ -1,5 +1,6 @@
 import StudyCallout from '@/components/common/StudyCallout';
 import PageShell from '../components/PageShell';
+import PetersonSimulator from '../visualizations/PetersonSimulator';
 
 export default function PetersonPage() {
   return (
@@ -115,6 +116,21 @@ export default function PetersonPage() {
         הבינו את התפקיד של כל משתנה: <span dir="ltr">flag[i]</span> = "אני רוצה"; <span dir="ltr">turn</span> = "תורו של מי".
         ביחד הם מבטיחים שאם שניהם רוצים להיכנס בו-זמנית, רק אחד ייכנס — ואחרי כן גם השני יצליח.
       </StudyCallout>
+
+      <section className="w-full min-w-0 space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+        <header className="space-y-1">
+          <h3 className="m-0 text-base font-semibold text-slate-950 dark:text-slate-50">
+            הדמיה: Peterson צעד-צעד
+          </h3>
+          <p className="m-0 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            <strong>מה לעקוב אחריו:</strong> שינויים ב-<span dir="ltr" className="font-mono">flag[0]</span>,{' '}
+            <span dir="ltr" className="font-mono">flag[1]</span>, ו-<span dir="ltr" className="font-mono">turn</span>;
+            איך כל תהליך עובר בין השלבים (set-flag, set-turn, waiting, critical); ובאיזה רגע מי נכנס ומי מחכה.
+            התרחיש "תחרות" הוא הלב — שם רואים בדיוק איך turn קובע מי ייכנס ראשון.
+          </p>
+        </header>
+        <PetersonSimulator />
+      </section>
 
       <StudyCallout variant="pitfall">
         Peterson אינו מובטח לעבוד על מעבדים מודרניים שמסדרים מחדש פקודות (instruction reordering / memory reordering).

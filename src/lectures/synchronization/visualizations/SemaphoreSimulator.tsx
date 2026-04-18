@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import StepController from '@/components/common/StepController';
 import { cn } from '@/lib/utils';
 import {
   PROCESS_STATE_LABELS,
   SEMAPHORE_SCENARIOS,
+  SIGNAL_CODE,
+  WAIT_CODE,
   getSemaphoreScenarioById,
-  type ActionType,
+  type CodeLine,
+  type CodePath,
   type ProcessState,
   type SemaphoreScenario,
   type SemaphoreState,
 } from '../lib/semaphoreScenarios';
 
 const PROCESS_STATE_STYLES: Record<ProcessState, string> = {
-  ready: 'border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
+  ready:
+    'border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
   critical:
     'border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100',
   blocked:
@@ -22,13 +26,107 @@ const PROCESS_STATE_STYLES: Record<ProcessState, string> = {
   done: 'border-slate-300 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-500',
 };
 
-interface SemaphoreBoxProps {
-  value: number;
-  queue: string[];
+interface CodeBlockProps {
+  path: CodePath;
+  activeLine: CodeLine | null;
+  active: boolean;
+}
+
+function CodeBlock({ path, activeLine, active }: CodeBlockProps) {
+  const lines = path === 'wait' ? WAIT_CODE : SIGNAL_CODE;
+  const headerColor =
+    path === 'wait'
+      ? 'text-amber-700 dark:text-amber-300'
+      : 'text-emerald-700 dark:text-emerald-300';
+  const borderColor =
+    path === 'wait'
+      ? active
+        ? 'border-amber-500 dark:border-amber-600'
+        : 'border-amber-200 dark:border-amber-900'
+      : active
+        ? 'border-emerald-500 dark:border-emerald-600'
+        : 'border-emerald-200 dark:border-emerald-900';
+  const highlightClass =
+    path === 'wait'
+      ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-50'
+      : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-50';
+  const dimmed = !active;
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-col rounded-lg border-2 bg-white p-3 transition-all dark:bg-slate-950',
+        borderColor,
+        active ? 'shadow-md' : 'opacity-70'
+      )}
+    >
+      <div className={cn('mb-2 flex items-baseline justify-between gap-2')}>
+        <div className={cn('font-mono text-xs font-bold', headerColor)} dir="ltr">
+          {path === 'wait' ? 'wait(S)' : 'signal(S)'}
+        </div>
+        {active ? (
+          <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            מופעל עכשיו
+          </span>
+        ) : null}
+      </div>
+      <div className="rounded-md bg-slate-50 p-2 dark:bg-slate-900/60" dir="ltr">
+        <div className="font-mono text-[11px] leading-relaxed text-slate-500 dark:text-slate-500">
+          {path === 'wait' ? 'wait(semaphore *S) {' : 'signal(semaphore *S) {'}
+        </div>
+        <ol className="m-0 list-none p-0">
+          {lines.map((line) => {
+            const isActive = active && activeLine === line.num;
+            return (
+              <li
+                key={`${path}-${line.num}`}
+                className={cn(
+                  'relative flex items-center gap-2 rounded px-2 py-1 font-mono text-[11px] transition-colors',
+                  isActive
+                    ? highlightClass
+                    : dimmed
+                      ? 'text-slate-400 dark:text-slate-600'
+                      : 'text-slate-700 dark:text-slate-300'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block w-4 shrink-0 text-[10px] font-bold',
+                    isActive ? 'opacity-100' : 'opacity-40'
+                  )}
+                >
+                  {line.num}.
+                </span>
+                <span>{line.text}</span>
+                {isActive ? (
+                  <motion.span
+                    layoutId={`${path}-arrow`}
+                    className="absolute -start-1 top-1/2 -translate-y-1/2 text-sm"
+                    aria-hidden
+                  >
+                    ◂
+                  </motion.span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+        <div className="font-mono text-[11px] leading-relaxed text-slate-500 dark:text-slate-500">
+          {'  }'}
+          <br />
+          {'}'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface SemaphoreStateViewProps {
+  state: SemaphoreState;
   highlight: boolean;
 }
 
-function SemaphoreBox({ value, queue, highlight }: SemaphoreBoxProps) {
+function SemaphoreStateView({ state, highlight }: SemaphoreStateViewProps) {
+  const { value, queue } = state.semaphore;
   const valueClass =
     value > 0
       ? 'text-emerald-700 dark:text-emerald-300'
@@ -139,7 +237,7 @@ function ProcessRow({ pid, state, active, woke }: ProcessRowProps) {
   return (
     <div
       className={cn(
-        'flex items-center justify-between rounded-md border-2 px-3 py-2 transition-all',
+        'flex items-center justify-between rounded-md border-2 px-3 py-1.5 transition-all',
         PROCESS_STATE_STYLES[state],
         active ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-slate-950' : '',
         woke ? 'ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-slate-950' : ''
@@ -165,24 +263,6 @@ function ProcessRow({ pid, state, active, woke }: ProcessRowProps) {
   );
 }
 
-const ACTION_BADGE: Record<ActionType, { label: string; class: string; Icon: typeof ArrowDownToLine }> = {
-  wait: {
-    label: 'wait()',
-    class: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
-    Icon: ArrowDownToLine,
-  },
-  signal: {
-    label: 'signal()',
-    class: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-    Icon: ArrowUpFromLine,
-  },
-  enter: {
-    label: 'enter',
-    class: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
-    Icon: ArrowDownToLine,
-  },
-};
-
 export default function SemaphoreSimulator() {
   const [scenarioId, setScenarioId] = useState<string>(SEMAPHORE_SCENARIOS[0].id);
   const [stepIndex, setStepIndex] = useState(-1);
@@ -200,7 +280,8 @@ export default function SemaphoreSimulator() {
   }, [scenario, stepIndex]);
 
   const currentStep = stepIndex >= 0 ? scenario.steps[stepIndex] : null;
-  const previousState = useMemo(() => {
+
+  const previousState: SemaphoreState = useMemo(() => {
     if (stepIndex <= 0) return scenario.initial;
     return scenario.steps[stepIndex - 1].state;
   }, [scenario, stepIndex]);
@@ -239,12 +320,13 @@ export default function SemaphoreSimulator() {
 
   useEffect(() => {
     if (!isPlaying) return;
-    const timer = setTimeout(handleNext, 1800);
+    const timer = setTimeout(handleNext, 1500);
     return () => clearTimeout(timer);
   }, [stepIndex, isPlaying, handleNext]);
 
   const isFinalStep = stepIndex === totalSteps - 1;
-  const actionBadge = currentStep ? ACTION_BADGE[currentStep.actionType] : null;
+  const activeWaitLine = currentStep?.codePath === 'wait' ? currentStep.codeLine : null;
+  const activeSignalLine = currentStep?.codePath === 'signal' ? currentStep.codeLine : null;
 
   return (
     <div className="w-full min-w-0 space-y-4" dir="rtl">
@@ -274,31 +356,23 @@ export default function SemaphoreSimulator() {
         {scenario.subtitle}
       </p>
 
-      <SemaphoreBox
-        value={state.semaphore.value}
-        queue={state.semaphore.queue}
-        highlight={semaphoreChanged}
-      />
-
-      <div className="space-y-2">
-        <div className="text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-          תהליכים
-        </div>
-        <div className="space-y-2">
-          {scenario.participants.map((pid) => (
-            <ProcessRow
-              key={pid}
-              pid={pid}
-              state={state.processes[pid] ?? 'ready'}
-              active={currentStep?.actor === pid}
-              woke={currentStep?.wokeUp === pid}
-            />
-          ))}
-        </div>
+      {/* קוד — העיקרי. שתי הפונקציות זו לצד זו במסך רחב, מוערמות במסך צר. */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <CodeBlock
+          path="wait"
+          activeLine={activeWaitLine}
+          active={currentStep?.codePath === 'wait'}
+        />
+        <CodeBlock
+          path="signal"
+          activeLine={activeSignalLine}
+          active={currentStep?.codePath === 'signal'}
+        />
       </div>
 
+      {/* הסבר קצר שנצמד לשורת הקוד הפעילה */}
       <div className="rounded-md border bg-muted p-3 text-sm leading-relaxed">
-        {currentStep && actionBadge ? (
+        {currentStep ? (
           <>
             <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
@@ -307,12 +381,13 @@ export default function SemaphoreSimulator() {
               <span
                 className={cn(
                   'inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[11px] font-bold',
-                  actionBadge.class
+                  currentStep.codePath === 'wait'
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
                 )}
                 dir="ltr"
               >
-                <actionBadge.Icon className="h-3 w-3" />
-                {currentStep.action}
+                {currentStep.actor} · {currentStep.codePath}(S) · שורה {currentStep.codeLine}
               </span>
             </div>
             <div className="text-slate-800 dark:text-slate-100">{currentStep.explanation}</div>
@@ -338,14 +413,33 @@ export default function SemaphoreSimulator() {
         )}
       </div>
 
+      {/* מצב המערכת — משני. מה שהשורה הפעילה הובילה אליו. */}
+      <div className="space-y-2">
+        <div className="text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+          התוצאה: מצב הסמאפור והתהליכים
+        </div>
+        <SemaphoreStateView state={state} highlight={semaphoreChanged} />
+        <div className="grid gap-1.5">
+          {scenario.participants.map((pid) => (
+            <ProcessRow
+              key={pid}
+              pid={pid}
+              state={state.processes[pid] ?? 'ready'}
+              active={currentStep?.actor === pid}
+              woke={currentStep?.wokeUp === pid}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="rounded-md border border-violet-200 bg-violet-50 p-3 text-xs leading-relaxed dark:border-violet-900 dark:bg-violet-950/30">
         <div className="mb-1 font-bold text-violet-800 dark:text-violet-300">
           השוואה: blocking מול busy waiting
         </div>
         <p className="m-0 text-slate-700 dark:text-slate-200">
-          ההדמיה משתמשת ב-<strong>blocking</strong>: ערך שלילי = יש בתור, התהליכים לא מבזבזים CPU.
-          במימוש <strong>busy waiting</strong> (spinlock) הערך לעולם לא יורד מתחת ל-0,
-          אין תור, ותהליך שמחכה רץ בלולאה ובוזבז CPU עד שהערך יחזור להיות חיובי.
+          ההדמיה משתמשת ב-<strong>blocking</strong>: ערך שלילי = יש בתור; שורות 3-4 של wait() מוסיפות לתור וחוסמות, ושורות 3-4 של signal() שולפות ומעירות.
+          במימוש <strong>busy waiting</strong> (spinlock), wait() מסתכם ב-<span dir="ltr" className="font-mono">while (S &lt;= 0) ; S--;</span>
+          — אין תור, אין block(), והתהליך מסתובב ובוזבז CPU עד שהערך חוזר להיות חיובי.
         </p>
       </div>
 

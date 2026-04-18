@@ -1,5 +1,6 @@
 // תרחישים להדגמת semaphore עם תור חסימה (blocking).
-// כל צעד מציג את המצב המלא לאחר ביצוע — קל לעבור קדימה ואחורה.
+// כל צעד מתאים לשורת קוד אחת ב-wait() או ב-signal(),
+// כך שהלומד רואה code → step → consequence.
 
 export type ProcessState =
   | 'ready' // זמין, לא ביצע פעולה עדיין
@@ -7,7 +8,8 @@ export type ProcessState =
   | 'blocked' // חסום בתור הסמאפור
   | 'done'; // סיים את הריצה שלו
 
-export type ActionType = 'wait' | 'signal' | 'enter';
+export type CodePath = 'wait' | 'signal';
+export type CodeLine = 1 | 2 | 3 | 4;
 
 export interface SemaphoreSnapshot {
   value: number;
@@ -21,19 +23,19 @@ export interface SemaphoreState {
 }
 
 export interface SemaphoreStep {
-  /** מי ביצע פעולה */
+  /** מי מבצע את שורת הקוד */
   actor: string;
-  /** סוג הפעולה — לתיוג ויזואלי */
-  actionType: ActionType;
-  /** טקסט קצר של הפעולה */
-  action: string;
-  /** המצב המלא לאחר ביצוע */
+  /** באיזה מסלול קוד נמצאים — wait(S) או signal(S) */
+  codePath: CodePath;
+  /** איזו שורה בתוך הפונקציה בוצעה כעת */
+  codeLine: CodeLine;
+  /** המצב המלא לאחר ביצוע השורה */
   state: SemaphoreState;
-  /** הסבר מורחב בעברית */
+  /** הסבר בעברית — מה השורה עושה, איך המצב השתנה ולמה */
   explanation: string;
-  /** הערה לצדדי הוראה */
+  /** הערה הוראתית (כותרת "שים לב") */
   note?: string;
-  /** האם הפעולה גרמה ליציאה של תהליך אחר מהתור */
+  /** אם הפעולה גרמה ליקיצה של תהליך שנחסם בתור */
   wokeUp?: string;
 }
 
@@ -41,265 +43,283 @@ export interface SemaphoreScenario {
   id: string;
   title: string;
   subtitle: string;
-  /** ערך התחלתי של הסמאפור */
   initialValue: number;
-  /** התהליכים שמשתתפים בתרחיש — בסדר ההצגה */
   participants: string[];
   initial: SemaphoreState;
   steps: SemaphoreStep[];
   conclusion: string;
 }
 
-function buildInitialState(
+/** הקוד המתואר ב-wait(S). שורות בתוך גוף הפונקציה. */
+export const WAIT_CODE: { num: CodeLine; text: string }[] = [
+  { num: 1, text: 'S.value--;' },
+  { num: 2, text: 'if (S.value < 0) {' },
+  { num: 3, text: '    add this process to S.list;' },
+  { num: 4, text: '    block();' },
+];
+
+/** הקוד המתואר ב-signal(S). */
+export const SIGNAL_CODE: { num: CodeLine; text: string }[] = [
+  { num: 1, text: 'S.value++;' },
+  { num: 2, text: 'if (S.value <= 0) {' },
+  { num: 3, text: '    remove a process P from S.list;' },
+  { num: 4, text: '    wakeup(P);' },
+];
+
+function buildInitial(
   initialValue: number,
   participants: string[]
 ): SemaphoreState {
   const processes: Record<string, ProcessState> = {};
-  for (const id of participants) {
-    processes[id] = 'ready';
-  }
+  for (const id of participants) processes[id] = 'ready';
   return {
     semaphore: { value: initialValue, queue: [] },
     processes,
   };
 }
 
-const SCENARIO_BINARY_NO_CONTENTION: SemaphoreScenario = (() => {
+// ============================================================
+// בניית תרחישים בעזרת "runner" זעיר שמתחזק state חי
+// ועוטה כל פעולה לסדרת sub-steps ברמת שורת קוד.
+// ============================================================
+
+interface Runner {
+  value: number;
+  queue: string[];
+  procs: Record<string, ProcessState>;
+  steps: SemaphoreStep[];
+}
+
+function snapshot(r: Runner): SemaphoreState {
+  return {
+    semaphore: { value: r.value, queue: [...r.queue] },
+    processes: { ...r.procs },
+  };
+}
+
+function push(
+  r: Runner,
+  actor: string,
+  codePath: CodePath,
+  codeLine: CodeLine,
+  explanation: string,
+  extras?: { note?: string; wokeUp?: string }
+) {
+  r.steps.push({
+    actor,
+    codePath,
+    codeLine,
+    state: snapshot(r),
+    explanation,
+    note: extras?.note,
+    wokeUp: extras?.wokeUp,
+  });
+}
+
+/** wait() — תמיד מתחיל ב-S.value-- ואז בודק. אם חיובי/אפס → ממשיך. אחרת → נכנס לתור ונחסם. */
+function doWait(r: Runner, actor: string, note?: { onBlock?: string; onPass?: string }) {
+  // שורה 1: S.value--
+  r.value -= 1;
+  push(r, actor, 'wait', 1, `${actor} מבצע wait(S): שורה 1 — S.value יורד ל-${r.value}.`);
+
+  // שורה 2: הבדיקה
+  if (r.value < 0) {
+    push(
+      r,
+      actor,
+      'wait',
+      2,
+      `הבדיקה S.value < 0 מתקיימת (${r.value} < 0). נכנסים לענף החסימה — נמשיך לשורות 3-4.`,
+      { note: note?.onBlock }
+    );
+    // שורה 3: add to queue
+    r.queue.push(actor);
+    push(
+      r,
+      actor,
+      'wait',
+      3,
+      `${actor} נוסף לסוף התור. התור הפך ל-[${r.queue.join(', ')}].`
+    );
+    // שורה 4: block()
+    r.procs[actor] = 'blocked';
+    push(
+      r,
+      actor,
+      'wait',
+      4,
+      `block() נקרא — ${actor} יוצא מריצה. הוא לא צורך CPU יותר ממתין שיתעוררו אותו.`
+    );
+  } else {
+    push(
+      r,
+      actor,
+      'wait',
+      2,
+      `הבדיקה S.value < 0 לא מתקיימת (${r.value} ≥ 0). מדלגים על הענף, ו-${actor} ממשיך ישירות לקטע הקריטי.`,
+      { note: note?.onPass }
+    );
+    r.procs[actor] = 'critical';
+  }
+}
+
+/** signal() — תמיד מתחיל ב-S.value++ ואז בודק. אם יש בתור (value<=0) → שולף ומעיר. */
+function doSignal(
+  r: Runner,
+  actor: string,
+  note?: { onWake?: string; onNoWake?: string }
+) {
+  // שורה 1: S.value++
+  r.value += 1;
+  push(r, actor, 'signal', 1, `${actor} מבצע signal(S): שורה 1 — S.value עולה ל-${r.value}.`);
+
+  // שורה 2: הבדיקה
+  if (r.value <= 0) {
+    push(
+      r,
+      actor,
+      'signal',
+      2,
+      `הבדיקה S.value ≤ 0 מתקיימת (${r.value} ≤ 0) — סימן שיש ממתינים בתור. ממשיכים לשורות 3-4.`,
+      { note: note?.onWake }
+    );
+    // שורה 3: remove from queue
+    const woken = r.queue.shift();
+    if (!woken) throw new Error('signal expected queue to be non-empty');
+    push(
+      r,
+      actor,
+      'signal',
+      3,
+      `מוציאים את ${woken} מראש התור. התור הפך ל-[${r.queue.join(', ')}].`
+    );
+    // שורה 4: wakeup
+    r.procs[woken] = 'critical';
+    r.procs[actor] = 'done';
+    push(
+      r,
+      actor,
+      'signal',
+      4,
+      `wakeup(${woken}) — ${woken} חוזר לריצה ונכנס לקטע הקריטי. ${actor} סיים.`,
+      { wokeUp: woken }
+    );
+  } else {
+    r.procs[actor] = 'done';
+    push(
+      r,
+      actor,
+      'signal',
+      2,
+      `הבדיקה S.value ≤ 0 לא מתקיימת (${r.value} > 0) — אין ממתינים. מדלגים על הענף. ${actor} סיים.`,
+      { note: note?.onNoWake }
+    );
+  }
+}
+
+function makeRunner(initialValue: number, participants: string[]): Runner {
+  return {
+    value: initialValue,
+    queue: [],
+    procs: Object.fromEntries(participants.map((id) => [id, 'ready' as ProcessState])),
+    steps: [],
+  };
+}
+
+// ============================================================
+// Scenario 1: Binary mutex — no contention
+// ============================================================
+const SCENARIO_NO_CONTENTION: SemaphoreScenario = (() => {
   const participants = ['P1', 'P2'];
+  const r = makeRunner(1, participants);
+  doWait(r, 'P1', { onPass: 'היה ערך 1 — זמין. אין חסימה.' });
+  doSignal(r, 'P1', { onNoWake: 'התור ריק — אין מי להעיר.' });
+  doWait(r, 'P2');
+  doSignal(r, 'P2');
   return {
     id: 'binary-no-contention',
     title: 'Mutex — בלי תחרות',
     subtitle:
-      'Binary semaphore (mutex) עם שני תהליכים שניגשים אחד אחרי השני. אף אחד לא נחסם.',
+      'שני תהליכים רצופים, בלי חסימה. נראה איך כל שורת קוד בתוך wait() ו-signal() משנה את הערך.',
     initialValue: 1,
     participants,
-    initial: buildInitialState(1, participants),
-    steps: [
-      {
-        actor: 'P1',
-        actionType: 'wait',
-        action: 'P1: wait(S)',
-        state: {
-          semaphore: { value: 0, queue: [] },
-          processes: { P1: 'critical', P2: 'ready' },
-        },
-        explanation:
-          'P1 קורא wait(S). הערך 1 יורד ל-0 — חיובי או 0, אין חסימה. P1 נכנס לקטע הקריטי.',
-      },
-      {
-        actor: 'P1',
-        actionType: 'signal',
-        action: 'P1: signal(S)',
-        state: {
-          semaphore: { value: 1, queue: [] },
-          processes: { P1: 'done', P2: 'ready' },
-        },
-        explanation:
-          'P1 סיים את העבודה ומשחרר. signal(S) מעלה את הערך מ-0 ל-1. התור ריק, אז אין מי להעיר.',
-      },
-      {
-        actor: 'P2',
-        actionType: 'wait',
-        action: 'P2: wait(S)',
-        state: {
-          semaphore: { value: 0, queue: [] },
-          processes: { P1: 'done', P2: 'critical' },
-        },
-        explanation:
-          'P2 מגיע ומבצע wait(S). הערך יורד ל-0. שוב — אין חסימה, P2 נכנס.',
-      },
-      {
-        actor: 'P2',
-        actionType: 'signal',
-        action: 'P2: signal(S)',
-        state: {
-          semaphore: { value: 1, queue: [] },
-          processes: { P1: 'done', P2: 'done' },
-        },
-        explanation:
-          'P2 משחרר. הערך חוזר ל-1. הסמאפור חזר למצב ההתחלתי, מוכן לסבב הבא.',
-      },
-    ],
+    initial: buildInitial(1, participants),
+    steps: r.steps,
     conclusion:
-      'בלי תחרות: כל wait מצליח מיד. הערך פשוט יורד ועולה בין 0 ל-1, ואף תהליך לא נחסם.',
+      'wait() עם ערך חיובי: שורה 1 מורידה, שורה 2 מדלגת על הענף. signal() עם תור ריק: שורה 1 מעלה, שורה 2 מדלגת. אין כניסה לשורות 3-4.',
   };
 })();
 
-const SCENARIO_BINARY_WITH_BLOCKING: SemaphoreScenario = (() => {
+// ============================================================
+// Scenario 2: Binary mutex — with blocking queue
+// ============================================================
+const SCENARIO_BLOCKING: SemaphoreScenario = (() => {
   const participants = ['P1', 'P2', 'P3'];
+  const r = makeRunner(1, participants);
+  doWait(r, 'P1');
+  doWait(r, 'P2', {
+    onBlock:
+      'שלב קריטי: ערך שלילי מסמן "יש ממתין". במימוש blocking התהליך לא מסתובב — הוא יוצא מריצה.',
+  });
+  doWait(r, 'P3');
+  doSignal(r, 'P1', {
+    onWake: 'כאן רואים בדיוק למה שורה 2 בודקת ≤0: אם הערך שלילי, יש מי להוציא מהתור.',
+  });
+  doSignal(r, 'P2');
+  doSignal(r, 'P3', {
+    onNoWake: 'הערך חזר ל-1 והתור ריק. הסמאפור חזר למצב ההתחלתי.',
+  });
   return {
     id: 'binary-blocking',
     title: 'Mutex — עם תור חסימה',
     subtitle:
-      'שלושה תהליכים מתחרים על mutex אחד. שניים נחסמים בתור — רואים איך הערך יורד מתחת ל-0 וכיצד signal מעיר.',
+      'שלושה תהליכים על mutex אחד. שניים נחסמים — רואים את שורות 3-4 של wait() בפעולה, ואת שורות 3-4 של signal() מעירות אותם.',
     initialValue: 1,
     participants,
-    initial: buildInitialState(1, participants),
-    steps: [
-      {
-        actor: 'P1',
-        actionType: 'wait',
-        action: 'P1: wait(S)',
-        state: {
-          semaphore: { value: 0, queue: [] },
-          processes: { P1: 'critical', P2: 'ready', P3: 'ready' },
-        },
-        explanation:
-          'P1 ראשון ל-wait. הערך יורד מ-1 ל-0. P1 נכנס לקטע הקריטי.',
-      },
-      {
-        actor: 'P2',
-        actionType: 'wait',
-        action: 'P2: wait(S) — נחסם',
-        state: {
-          semaphore: { value: -1, queue: ['P2'] },
-          processes: { P1: 'critical', P2: 'blocked', P3: 'ready' },
-        },
-        explanation:
-          'P2 קורא wait(S). הערך יורד ל-1-. כשהערך שלילי במימוש blocking, התהליך נכנס לתור הסמאפור ונחסם (block).',
-        note: 'במימוש blocking: ערך שלילי = כמה תהליכים ממתינים. כאן יש אחד.',
-      },
-      {
-        actor: 'P3',
-        actionType: 'wait',
-        action: 'P3: wait(S) — נחסם',
-        state: {
-          semaphore: { value: -2, queue: ['P2', 'P3'] },
-          processes: { P1: 'critical', P2: 'blocked', P3: 'blocked' },
-        },
-        explanation:
-          'גם P3 ניסה wait(S). הערך יורד ל-2-. P3 מצטרף לסוף התור (FIFO).',
-      },
-      {
-        actor: 'P1',
-        actionType: 'signal',
-        action: 'P1: signal(S) — מעיר את P2',
-        wokeUp: 'P2',
-        state: {
-          semaphore: { value: -1, queue: ['P3'] },
-          processes: { P1: 'done', P2: 'critical', P3: 'blocked' },
-        },
-        explanation:
-          'P1 סיים. signal(S) מעלה את הערך ל-1-. הערך עדיין שלילי — סימן שיש מישהו בתור. שולפים את הראש (P2) ומעירים אותו, P2 נכנס לקטע הקריטי.',
-        note: 'הערך לא חזר ל-0 כי קוד הסמאפור שלף קודם, כלומר ערך שלילי משקף עדיין את הצירוף "כמה ממתינים".',
-      },
-      {
-        actor: 'P2',
-        actionType: 'signal',
-        action: 'P2: signal(S) — מעיר את P3',
-        wokeUp: 'P3',
-        state: {
-          semaphore: { value: 0, queue: [] },
-          processes: { P1: 'done', P2: 'done', P3: 'critical' },
-        },
-        explanation:
-          'P2 סיים. signal(S) מעלה ל-0. עדיין יש בתור — P3 מתעורר ונכנס.',
-      },
-      {
-        actor: 'P3',
-        actionType: 'signal',
-        action: 'P3: signal(S)',
-        state: {
-          semaphore: { value: 1, queue: [] },
-          processes: { P1: 'done', P2: 'done', P3: 'done' },
-        },
-        explanation:
-          'P3 סיים. signal(S) מעלה ל-1. אין מי להעיר. הסמאפור חזר למצב התחלתי.',
-      },
-    ],
+    initial: buildInitial(1, participants),
+    steps: r.steps,
     conclusion:
-      'תהליכים שלא יכלו להיכנס המתינו בתור FIFO. כל signal שמצא תהליכים בתור העיר אחד מהם — בלי busy waiting.',
+      'התור FIFO של השמאפור + ערך שלילי הם הגרעין של blocking: כל signal עם ערך ≤0 שולף תהליך מהתור ומעיר אותו — בלי busy waiting.',
   };
 })();
 
+// ============================================================
+// Scenario 3: Counting semaphore
+// ============================================================
 const SCENARIO_COUNTING: SemaphoreScenario = (() => {
   const participants = ['P1', 'P2', 'P3'];
+  const r = makeRunner(2, participants);
+  doWait(r, 'P1');
+  doWait(r, 'P2', {
+    onPass:
+      'counting: הערך ההתחלתי 2, ולכן שני תהליכים יכולים לעבור wait() בלי לחסום זה את זה.',
+  });
+  doWait(r, 'P3', {
+    onBlock: 'המשאב השלישי תפוס. רק עכשיו wait() של P3 יוצא שלילי וחוסם.',
+  });
+  doSignal(r, 'P1', {
+    onWake:
+      'שחרור של P1 מקפיץ את הערך מ-1- ל-0. ≤0 מתקיים — שולפים את P3 ומעירים אותו.',
+  });
+  doSignal(r, 'P2');
+  doSignal(r, 'P3');
   return {
     id: 'counting',
     title: 'Counting Semaphore — שני משאבים',
     subtitle:
-      'Counting semaphore עם ערך התחלתי 2 — מייצג שני משאבים זהים. שלושה תהליכים מתחרים. שניים נכנסים יחד.',
+      'Semaphore עם ערך התחלתי 2. שני תהליכים נכנסים יחד, השלישי נחסם עד ששוחרר משאב.',
     initialValue: 2,
     participants,
-    initial: buildInitialState(2, participants),
-    steps: [
-      {
-        actor: 'P1',
-        actionType: 'wait',
-        action: 'P1: wait(S)',
-        state: {
-          semaphore: { value: 1, queue: [] },
-          processes: { P1: 'critical', P2: 'ready', P3: 'ready' },
-        },
-        explanation:
-          'P1 לוקח את המשאב הראשון. הערך יורד מ-2 ל-1. עדיין יש מקום פנוי.',
-      },
-      {
-        actor: 'P2',
-        actionType: 'wait',
-        action: 'P2: wait(S)',
-        state: {
-          semaphore: { value: 0, queue: [] },
-          processes: { P1: 'critical', P2: 'critical', P3: 'ready' },
-        },
-        explanation:
-          'P2 לוקח את המשאב השני. הערך יורד ל-0. שני תהליכים בקטע הקריטי בו-זמנית — מותר, כי counting semaphore.',
-        note: 'שימו לב: בניגוד ל-mutex, כאן יותר מתהליך אחד בקטע הקריטי. זה תקין כי המשאב מאפשר שני "מקומות".',
-      },
-      {
-        actor: 'P3',
-        actionType: 'wait',
-        action: 'P3: wait(S) — נחסם',
-        state: {
-          semaphore: { value: -1, queue: ['P3'] },
-          processes: { P1: 'critical', P2: 'critical', P3: 'blocked' },
-        },
-        explanation:
-          'P3 ניסה אבל אין משאב פנוי. הערך יורד ל-1-, P3 נכנס לתור.',
-      },
-      {
-        actor: 'P1',
-        actionType: 'signal',
-        action: 'P1: signal(S) — מעיר את P3',
-        wokeUp: 'P3',
-        state: {
-          semaphore: { value: 0, queue: [] },
-          processes: { P1: 'done', P2: 'critical', P3: 'critical' },
-        },
-        explanation:
-          'P1 שחרר את המשאב שלו. הערך עולה ל-0. יש בתור — P3 מתעורר ונכנס. עכשיו P2 ו-P3 בקטע הקריטי יחד.',
-      },
-      {
-        actor: 'P2',
-        actionType: 'signal',
-        action: 'P2: signal(S)',
-        state: {
-          semaphore: { value: 1, queue: [] },
-          processes: { P1: 'done', P2: 'done', P3: 'critical' },
-        },
-        explanation:
-          'P2 שחרר. הערך עולה ל-1. אין בתור, אז אין מי להעיר.',
-      },
-      {
-        actor: 'P3',
-        actionType: 'signal',
-        action: 'P3: signal(S)',
-        state: {
-          semaphore: { value: 2, queue: [] },
-          processes: { P1: 'done', P2: 'done', P3: 'done' },
-        },
-        explanation:
-          'P3 סיים גם הוא. הערך חוזר ל-2 — כל המשאבים פנויים שוב.',
-      },
-    ],
+    initial: buildInitial(2, participants),
+    steps: r.steps,
     conclusion:
-      'Counting semaphore עם ערך 2 איפשר שני תהליכים בו-זמנית. השלישי המתין בתור עד ששוחרר משאב.',
+      'אותו קוד בדיוק של wait()/signal() — רק ערך התחלתי שונה. הלוגיקה לא משתנה בין binary ל-counting.',
   };
 })();
 
 export const SEMAPHORE_SCENARIOS: SemaphoreScenario[] = [
-  SCENARIO_BINARY_NO_CONTENTION,
-  SCENARIO_BINARY_WITH_BLOCKING,
+  SCENARIO_NO_CONTENTION,
+  SCENARIO_BLOCKING,
   SCENARIO_COUNTING,
 ];
 

@@ -1,5 +1,6 @@
 import StudyCallout from '@/components/common/StudyCallout';
 import PageShell from '../components/PageShell';
+import ReadersWritersDemo from '../visualizations/ReadersWritersDemo';
 
 export default function ReadersWritersPage() {
   return (
@@ -127,6 +128,21 @@ export default function ReadersWritersPage() {
           קוראים שנכנסים באמצע לא נוגעים ב-<span dir="ltr" className="font-mono">wrt</span> כלל.
         </p>
       </div>
+
+      <section className="w-full min-w-0 space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+        <header className="space-y-1">
+          <h3 className="m-0 text-base font-semibold text-slate-950 dark:text-slate-50">
+            הדמיה: Readers-Writers צעד-צעד
+          </h3>
+          <p className="m-0 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            <strong>מה לעקוב אחריו:</strong> מצב המסד (פנוי / בקריאה משותפת / בכתיבה בלעדית),{' '}
+            <span dir="ltr" className="font-mono">readcount</span>,{' '}
+            <span dir="ltr" className="font-mono">mutex</span>, ו-<span dir="ltr" className="font-mono">wrt</span>.
+            התרחיש "Writer ממתין" מדגים איך הקורא האחרון משחרר את wrt ומאפשר לכותב לעבור.
+          </p>
+        </header>
+        <ReadersWritersDemo />
+      </section>
 
       <StudyCallout variant="pitfall">
         הבעיה הראשונה (First Readers-Writers) עלולה לגרום לרעב לכותבים: כל עוד יש קוראים בתור, כותב לעולם לא יקבל תור.

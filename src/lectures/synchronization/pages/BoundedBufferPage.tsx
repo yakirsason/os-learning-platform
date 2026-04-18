@@ -1,5 +1,6 @@
 import StudyCallout from '@/components/common/StudyCallout';
 import PageShell from '../components/PageShell';
+import BoundedBufferDemo from '../visualizations/BoundedBufferDemo';
 
 export default function BoundedBufferPage() {
   return (
@@ -137,6 +138,21 @@ export default function BoundedBufferPage() {
         תמיד: <span dir="ltr">wait(empty/full)</span> לפני <span dir="ltr">wait(mutex)</span>.
         הסמאפורים של ספירה (empty, full) מגיעים לפני הmutex — לא הפוך.
       </StudyCallout>
+
+      <section className="w-full min-w-0 space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+        <header className="space-y-1">
+          <h3 className="m-0 text-base font-semibold text-slate-950 dark:text-slate-50">
+            הדמיה: Bounded Buffer צעד-צעד
+          </h3>
+          <p className="m-0 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            <strong>מה לעקוב אחריו:</strong> תוכן החוצץ, ערכי שלושת הסמאפורים (
+            <span dir="ltr" className="font-mono">mutex</span>, <span dir="ltr" className="font-mono">empty</span>,{' '}
+            <span dir="ltr" className="font-mono">full</span>), והשורה שכל אקטור מבצע.
+            התרחיש "חוצץ מלא" מדגים למה סדר ה-wait חיוני — שם רואים איך Producer נחסם ואיך Consumer משחרר אותו.
+          </p>
+        </header>
+        <BoundedBufferDemo />
+      </section>
     </PageShell>
   );
 }

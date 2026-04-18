@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import StudyCallout from '@/components/common/StudyCallout';
 import { SYNC_PAGES } from '../components/syncPages';
 import PageShell from '../components/PageShell';
+import RaceConditionDemo from '../visualizations/RaceConditionDemo';
 
 export default function OverviewPage() {
   return (
@@ -35,6 +36,47 @@ export default function OverviewPage() {
       <StudyCallout variant="oneliner">
         הנושא המרכזי: איך מבטיחים שגישה משותפת לנתונים תהיה בטוחה, נכונה ויעילה.
       </StudyCallout>
+
+      <div className="space-y-2">
+        <h2 className="m-0 text-lg font-semibold text-slate-900 dark:text-slate-50">
+          איך נראית בעיית סנכרון בפועל?
+        </h2>
+        <p className="m-0 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+          תהליך מפיק (Producer) מוסיף 1 לדלפק, ובמקביל תהליך צרכן (Consumer) מחסיר 1 ממנו.
+          לכאורה, זוג הפעולות צריך לבטל זה את זה. אבל ברמת המכונה כל פעולה מורכבת מ-3 פקודות,
+          וכשהן משתלבות בסדר לא טוב — מתקבלת תוצאה שגויה.
+        </p>
+      </div>
+
+      <section className="w-full min-w-0 space-y-4 rounded-lg border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+        <header className="space-y-1">
+          <h3 className="m-0 text-base font-semibold text-slate-950 dark:text-slate-50">
+            הדמיה: Race Condition בפעולה
+          </h3>
+          <p className="m-0 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            <strong>מה לעקוב אחריו:</strong> שימו לב לערך של{' '}
+            <span dir="ltr" className="font-mono">counter</span> ולערכי הרגיסטרים המקומיים{' '}
+            <span dir="ltr" className="font-mono">R1</span> (של הProducer) ו-
+            <span dir="ltr" className="font-mono">R2</span> (של הConsumer) בכל צעד.
+            בתרחיש הבטוח התוצאה נכונה; בתרחיש הבעייתי הכתיבה האחרונה דורסת את הקודמת — וזו בדיוק הסיבה שאנו זקוקים לסנכרון.
+          </p>
+        </header>
+        <RaceConditionDemo />
+      </section>
+
+      <StudyCallout variant="exam">
+        Race Condition: התוצאה הסופית של חישוב משותף תלויה בסדר המדויק שבו התהליכים פועלים.
+        זה הופך את הבאג ללא דטרמיניסטי — לפעמים יעבוד, לפעמים לא.
+      </StudyCallout>
+
+      <div className="space-y-2">
+        <h2 className="m-0 text-lg font-semibold text-slate-900 dark:text-slate-50">
+          המשך הלמידה לפי נושאים
+        </h2>
+        <p className="m-0 text-xs text-slate-600 dark:text-slate-400">
+          כל עמוד מתמקד בנושא אחד. אפשר ללמוד לפי הסדר או לקפוץ למה שמעניין.
+        </p>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         {SYNC_PAGES.filter((page) => page.slug !== 'overview').map((page) => (

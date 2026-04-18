@@ -1,6 +1,8 @@
 import ConceptCard from '@/components/common/ConceptCard';
+import InteractiveDemo from '@/components/common/InteractiveDemo';
 import StudyCallout from '@/components/common/StudyCallout';
 import PageShell from '../components/PageShell';
+import CriticalSectionRuleChecker from '../visualizations/CriticalSectionRuleChecker';
 
 export default function CriticalSectionPage() {
   return (
@@ -110,6 +112,35 @@ export default function CriticalSectionPage() {
       <StudyCallout variant="exam">
         שלושת התנאים — Mutual Exclusion, Progress, Bounded Waiting — הם נושא מבחן קלאסי.
         וודאו שאתם יודעים להסביר כל אחד ולהדגים מה קורה אם הוא לא מתקיים.
+      </StudyCallout>
+
+      <InteractiveDemo
+        title="הדמיה: בדיקת שלושת הכללים"
+        explanation={
+          <>
+            <p>
+              <strong>איך לעבוד עם ההדמיה:</strong> בחרו תרחיש (תקין או הפרה), והתקדמו צעד אחרי צעד.
+              מעקב אחרי המיקום של כל תהליך בקטעי הקוד מצד אחד, ואחרי סטטוס שלושת הכללים בצד.
+            </p>
+            <p className="mt-2">
+              <strong>למה זה עוזר:</strong> ההבדל בין Progress ל-Bounded Waiting קשה לתפיסה מטקסט בלבד.
+              כאן רואים בדיוק מה כל תנאי בודק ומה קורה כשהוא נשבר.
+            </p>
+          </>
+        }
+      >
+        <CriticalSectionRuleChecker />
+      </InteractiveDemo>
+
+      <StudyCallout variant="compare" title="Progress מול Bounded Waiting">
+        <p className="m-0">
+          <strong>Progress</strong> שואל: "אם הקטע הקריטי פנוי, מישהו יכול להיכנס?"
+          <br />
+          <strong>Bounded Waiting</strong> שואל: "כמה זמן ספציפי תהליך אחד יכול לחכות לפני שיקבל תור?"
+        </p>
+        <p className="m-0 mt-2">
+          ייתכן ש-Progress מתקיים (תהליכים נכנסים) אבל Bounded Waiting מופר (תהליך מסוים לא מקבל תור לעולם — רעב).
+        </p>
       </StudyCallout>
     </PageShell>
   );

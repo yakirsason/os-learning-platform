@@ -1,5 +1,78 @@
 import type { LectureSubtopic } from '@/types';
 
+export const SYNCHRONIZATION_SUBTOPICS: LectureSubtopic[] = [
+  {
+    id: 'overview',
+    title: 'פתיחה',
+    englishTitle: 'Overview',
+    description: 'הבעיה שסנכרון בא לפתור ומפת הנושאים.',
+    group: 'foundation',
+  },
+  {
+    id: 'critical-section',
+    title: 'בעיית Critical Section',
+    englishTitle: 'Critical Section Problem',
+    description: 'הגדרת הבעיה, שלושת התנאים, ו-Race Condition.',
+    group: 'foundation',
+  },
+  {
+    id: 'peterson',
+    title: 'פתרון Peterson',
+    englishTitle: "Peterson's Solution",
+    description: 'פתרון תוכנתי לשני תהליכים עם turn ו-flag.',
+    group: 'foundation',
+  },
+  {
+    id: 'hardware',
+    title: 'סנכרון חומרה',
+    englishTitle: 'Synchronization Hardware',
+    description: 'פעולות אטומיות: TestAndSet ו-Swap.',
+    group: 'foundation',
+  },
+  {
+    id: 'semaphores',
+    title: 'Semaphores',
+    englishTitle: 'Semaphores',
+    description: 'wait() ו-signal(), binary ו-counting, תור חסימה.',
+    group: 'core',
+  },
+  {
+    id: 'classic-problems',
+    title: 'בעיות קלאסיות',
+    englishTitle: 'Classic Synchronization Problems',
+    description: 'שלוש בעיות קלאסיות שמדגימות אתגרי סנכרון.',
+    group: 'classic',
+  },
+  {
+    id: 'bounded-buffer',
+    title: 'Bounded Buffer',
+    englishTitle: 'Bounded Buffer Problem',
+    description: 'מפיק-צרכן עם חוצץ מוגבל.',
+    group: 'classic',
+  },
+  {
+    id: 'readers-writers',
+    title: 'Readers-Writers',
+    englishTitle: 'Readers-Writers Problem',
+    description: 'קוראים מרובים מול כותב בלעדי.',
+    group: 'classic',
+  },
+  {
+    id: 'dining-philosophers',
+    title: 'Dining Philosophers',
+    englishTitle: 'Dining Philosophers Problem',
+    description: 'deadlock ורעב — פילוסופים שמחכים לצלחות.',
+    group: 'classic',
+  },
+  {
+    id: 'monitors',
+    title: 'Monitors',
+    englishTitle: 'Monitors',
+    description: 'מבנה ברמה גבוהה שמפשט סנכרון ומקטין טעויות.',
+    group: 'advanced',
+  },
+];
+
 export const SCHEDULING_SUBTOPICS: LectureSubtopic[] = [
   {
     id: 'overview',

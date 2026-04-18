@@ -1,5 +1,5 @@
 import type { LectureMetadata } from '@/types';
-import { SCHEDULING_SUBTOPICS } from './lectureSubtopics';
+import { SCHEDULING_SUBTOPICS, SYNCHRONIZATION_SUBTOPICS } from './lectureSubtopics';
 
 // רישום מרכזי של כל ההרצאות בקורס - 10 הרצאות לפי הסילבוס הרשמי.
 // כל עוד isReady === false - תוצג קומפוננטת EmptyLecture במקום התוכן.
@@ -98,11 +98,21 @@ export const LECTURES: LectureMetadata[] = [
     id: 'synchronization',
     number: 5,
     title: 'סנכרון ו-Semaphores',
-    englishTitle: 'Synchronization and Semaphores',
-    description: '',
-    estimatedMinutes: null,
-    topics: [],
-    isReady: false,
+    englishTitle: 'Process Synchronization',
+    description:
+      'Race conditions, בעיית Critical Section, Peterson, חומרה אטומית, Semaphores, שלוש הבעיות הקלאסיות ו-Monitors.',
+    estimatedMinutes: 90,
+    topics: [
+      'Race Condition ובעיית הסנכרון',
+      'Critical Section — שלושת התנאים',
+      "פתרון Peterson",
+      'TestAndSet ו-Swap — סנכרון חומרה',
+      'Semaphores: binary ו-counting',
+      'Bounded Buffer, Readers-Writers, Dining Philosophers',
+      'Monitors ו-Condition Variables',
+    ],
+    subtopics: SYNCHRONIZATION_SUBTOPICS,
+    isReady: true,
   },
   {
     id: 'deadlocks',

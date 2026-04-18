@@ -93,6 +93,13 @@ export const SCHEDULING_SUBTOPICS: LectureSubtopic[] = [
     group: 'later',
   },
   {
+    id: 'comparison-waiting-time',
+    title: 'השוואת אלגוריתמים',
+    englishTitle: 'Algorithm Comparison',
+    description: 'SJF / SRTF / RR / MLFQ על אותו עומס עבודה.',
+    group: 'wrapup',
+  },
+  {
     id: 'secondary-topics',
     title: 'נושאים משלימים',
     englishTitle: 'Secondary Topics',

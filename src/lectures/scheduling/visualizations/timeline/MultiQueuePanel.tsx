@@ -7,6 +7,7 @@ interface MultiQueuePanelProps {
   runningProcess: string | null;
   runningQueueId?: string;
   queues: QueueSnapshot[];
+  waitingProcesses?: string[];
   remainingBursts: Record<string, number>;
   processStyles: TimelineProcessStyles;
 }
@@ -42,6 +43,7 @@ export default function MultiQueuePanel({
   runningProcess,
   runningQueueId,
   queues,
+  waitingProcesses = [],
   remainingBursts,
   processStyles,
 }: MultiQueuePanelProps) {
@@ -72,6 +74,24 @@ export default function MultiQueuePanel({
           <span className="text-sm text-slate-500">ה-CPU פנוי</span>
         )}
       </div>
+
+      {waitingProcesses.length > 0 ? (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="mb-2 text-xs font-bold text-amber-700 dark:text-amber-300">
+            ממתין ל-I/O
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {waitingProcesses.map((pid) => (
+              <TimelineProcessPill
+                key={pid}
+                processId={pid}
+                remaining={remainingBursts[pid] ?? 0}
+                processStyles={processStyles}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         {queues.map((lane, idx) => {

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { getSchedulingPage, type SchedulingPageSlug } from './schedulingPages';
 import BasicConceptsPage from '../pages/BasicConceptsPage';
 import BurstPredictionPage from '../pages/BurstPredictionPage';
+import ComparisonWaitingTimePage from '../pages/ComparisonWaitingTimePage';
 import CriteriaPage from '../pages/CriteriaPage';
 import FcfsPage from '../pages/FcfsPage';
 import MultilevelFeedbackQueuePage from '../pages/MultilevelFeedbackQueuePage';
@@ -32,6 +33,7 @@ const PAGE_COMPONENTS: Record<SchedulingPageSlug, ComponentType> = {
   'io-round-robin': IoRoundRobinPage,
   'multilevel-queue': MultilevelQueuePage,
   'multilevel-feedback-queue': MultilevelFeedbackQueuePage,
+  'comparison-waiting-time': ComparisonWaitingTimePage,
   'secondary-topics': SecondaryTopicsPage,
   practice: PracticePage,
   summary: SummaryPage,

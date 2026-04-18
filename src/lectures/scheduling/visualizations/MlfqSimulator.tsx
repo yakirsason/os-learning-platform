@@ -5,58 +5,60 @@ import {
   MLFQ_WORKLOAD,
   runMlfq,
 } from '../lib/mlfqScheduling';
-import AlgorithmTimelineStrip from './timeline/AlgorithmTimelineStrip';
+import {
+  SCHEDULING_PRESETS_BY_ID,
+  getPresetsForAlgorithm,
+} from '../lib/schedulingPresets';
+import IoAwareTimelineStrip from './timeline/IoAwareTimelineStrip';
+import IoWorkloadStrip from './timeline/IoWorkloadStrip';
 import MultiQueuePanel from './timeline/MultiQueuePanel';
+import PresetSelector from './timeline/PresetSelector';
 import TimelineCurrentEventPanel from './timeline/TimelineCurrentEventPanel';
-import TimelineWorkloadStrip from './timeline/TimelineWorkloadStrip';
 import TimelineWorkloadSummary from './timeline/TimelineWorkloadSummary';
 import {
   calculateRemainingBursts,
-  type TimelineProcessStyles,
+  computeProcessStyles,
 } from './timeline/timelineTypes';
 
-const PROCESS_STYLES: TimelineProcessStyles = {
-  P1: {
-    solid: 'bg-blue-600 dark:bg-blue-500',
-    soft: 'bg-blue-50 dark:bg-blue-950/30',
-    text: 'text-blue-700 dark:text-blue-200',
-    border: 'border-blue-200 dark:border-blue-900',
-  },
-  P2: {
-    solid: 'bg-emerald-600 dark:bg-emerald-500',
-    soft: 'bg-emerald-50 dark:bg-emerald-950/30',
-    text: 'text-emerald-700 dark:text-emerald-200',
-    border: 'border-emerald-200 dark:border-emerald-900',
-  },
-  P3: {
-    solid: 'bg-amber-500 dark:bg-amber-400',
-    soft: 'bg-amber-50 dark:bg-amber-950/30',
-    text: 'text-amber-700 dark:text-amber-200',
-    border: 'border-amber-200 dark:border-amber-900',
-  },
-};
+const AVAILABLE_PRESETS = getPresetsForAlgorithm('mlfq');
 
 export default function MlfqSimulator() {
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const result = useMemo(() => runMlfq(MLFQ_WORKLOAD, MLFQ_LEVELS), []);
+  const preset = selectedPresetId
+    ? SCHEDULING_PRESETS_BY_ID[selectedPresetId] ?? null
+    : null;
+
+  const workload = preset?.processes ?? MLFQ_WORKLOAD;
+  const levels = preset?.mlfqLevels ?? MLFQ_LEVELS;
+  const preemptive = preset?.mlfqPreemptive ?? true;
+  const processStyles = useMemo(
+    () => computeProcessStyles(workload),
+    [workload]
+  );
+
+  const result = useMemo(
+    () => runMlfq(workload, levels, { preemptive }),
+    [workload, levels, preemptive]
+  );
   const steps = result.steps;
   const totalSteps = steps.length;
   const current = steps[currentStep] ?? steps[0];
   const resultEnd = result.cpuSegments[result.cpuSegments.length - 1]?.end ?? 1;
-  const totalTime = Math.max(resultEnd, 1);
+  const ioEnd = result.ioSegments[result.ioSegments.length - 1]?.end ?? 0;
+  const totalTime = Math.max(resultEnd, ioEnd, 1);
+  const isRunComplete = currentStep === totalSteps - 1 && totalSteps > 0;
 
   const remainingBursts = useMemo(
-    () => calculateRemainingBursts(MLFQ_WORKLOAD, current.cpuSegments),
-    [current.cpuSegments]
+    () => calculateRemainingBursts(workload, current.cpuSegments),
+    [workload, current.cpuSegments]
   );
 
   const runningQueueId = useMemo(() => {
     if (!current.runningProcess) return undefined;
-    // On dispatch steps the event carries the source queue id
     if (current.event.queueId) return current.event.queueId;
-    // Fallback: last CPU segment for this process
     const lastSeg = current.cpuSegments
       .filter((s) => s.processId === current.runningProcess)
       .pop();
@@ -84,11 +86,22 @@ export default function MlfqSimulator() {
     setIsPlaying((p) => !p);
   }, []);
 
+  const handlePresetChange = useCallback((id: string | null) => {
+    setSelectedPresetId(id);
+    setCurrentStep(0);
+    setIsPlaying(false);
+  }, []);
+
   useEffect(() => {
     if (!isPlaying) return;
     const t = setTimeout(handleNext, 1600);
     return () => clearTimeout(t);
   }, [currentStep, handleNext, isPlaying]);
+
+  const rulesText = useMemo(() => {
+    const quanta = levels.map((l) => `${l.id.toUpperCase()} q=${l.quantum}`).join(', ');
+    return `${quanta} · ${preemptive ? 'preemptive' : 'non-preemptive'}`;
+  }, [levels, preemptive]);
 
   return (
     <section
@@ -100,40 +113,60 @@ export default function MlfqSimulator() {
           תצוגת Timeline: MLFQ
         </div>
         <h2 className="m-0 text-xl font-bold text-slate-950 dark:text-slate-50">
-          Multilevel Feedback Queue — Q1 / Q2 / Q3
+          Multilevel Feedback Queue
         </h2>
         <p className="m-0 mt-2 max-w-3xl text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-          תהליך חדש נכנס ל-<strong>Q1</strong>. אם הוא מנצל את כל ה-quantum בלי
-          לסיים, הוא <strong>יורד</strong> לתור נמוך יותר. תור גבוה יותר עוצר
-          את מי שרץ בתור נמוך (preemption).
+          תהליך חדש נכנס ל-<strong>התור העליון</strong>. אם הוא מנצל את כל
+          ה-quantum בלי לסיים, הוא <strong>יורד</strong> לתור נמוך יותר.
+          {preemptive
+            ? ' תור גבוה יותר עוצר את מי שרץ בתור נמוך (preemption).'
+            : ' בפריסט הזה ההרצה היא non-preemptive — תהליך שרץ לא נעצר גם אם מגיע תהליך לתור גבוה יותר.'}
         </p>
       </div>
 
+      <PresetSelector
+        presets={AVAILABLE_PRESETS}
+        selectedId={selectedPresetId}
+        onSelect={handlePresetChange}
+      />
+
       <section className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm dark:border-rose-900 dark:bg-rose-950/20">
-        <div className="mb-1 font-bold text-rose-900 dark:text-rose-200">
-          כללי MLFQ בהדמיה הזאת
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <div className="font-bold text-rose-900 dark:text-rose-200">
+            כללי ההרצה הפעילים
+          </div>
+          <span className="rounded bg-white/60 px-2 py-0.5 font-mono text-[11px] font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+            {rulesText}
+          </span>
         </div>
         <ul className="m-0 space-y-0.5 ps-5 text-rose-800 dark:text-rose-300">
-          <li>Q1 quantum = 2, Q2 quantum = 4, Q3 quantum = 8</li>
-          <li>תהליך חדש נכנס לראש Q1</li>
-          <li>סיום quantum בלי גמר → ירידה לתור הבא</li>
-          <li>תור גבוה יותר עוצר את מי שרץ בתור נמוך</li>
+          <li>תהליך חדש נכנס לראש התור העליון</li>
+          <li>סיום quantum מלא בלי גמר פאזת CPU → ירידה לתור הבא</li>
           <li>
-            אין כאן promotion (aging) — תהליך לא חוזר לתור גבוה יותר בגל הזה
+            I/O לפני סוף ה-quantum → התהליך <strong>לא</strong> יורד, וחוזר לאותה רמה אחרי ה-I/O
           </li>
+          <li>
+            {preemptive
+              ? 'תור גבוה יותר עוצר את מי שרץ בתור נמוך'
+              : 'אין preemption בין תורים בגרסה הזאת'}
+          </li>
+          <li>אין כאן promotion (aging) — תהליך לא חוזר מעצמו לתור גבוה יותר</li>
         </ul>
       </section>
 
-      <TimelineWorkloadStrip
-        processes={MLFQ_WORKLOAD}
-        processStyles={PROCESS_STYLES}
+      <IoWorkloadStrip
+        processes={workload}
+        processStyles={processStyles}
+        rightBadge={`רמות: ${levels.length}`}
       />
 
-      <AlgorithmTimelineStrip
-        entries={current.cpuSegments}
+      <IoAwareTimelineStrip
+        cpuEntries={current.cpuSegments}
+        ioEntries={current.ioSegments}
         totalTime={totalTime}
         currentTime={current.time}
-        processStyles={PROCESS_STYLES}
+        processStyles={processStyles}
+        isRunComplete={isRunComplete}
       />
 
       <StepController
@@ -156,13 +189,14 @@ export default function MlfqSimulator() {
           runningProcess={current.runningProcess}
           runningQueueId={runningQueueId}
           queues={current.queues}
+          waitingProcesses={current.waitingProcesses}
           remainingBursts={remainingBursts}
-          processStyles={PROCESS_STYLES}
+          processStyles={processStyles}
         />
       </div>
 
       <TimelineWorkloadSummary
-        processes={MLFQ_WORKLOAD}
+        processes={workload}
         metrics={result.metrics}
         averageWaitingTime={result.averageWaitingTime}
         averageTurnaroundTime={result.averageTurnaroundTime}

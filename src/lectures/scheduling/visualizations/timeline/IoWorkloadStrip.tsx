@@ -6,23 +6,29 @@ import type { TimelineProcessStyles } from './timelineTypes';
 interface IoWorkloadStripProps {
   processes: SchedulingProcess[];
   processStyles: TimelineProcessStyles;
-  quantum: number;
+  quantum?: number;
+  rightBadge?: string;
 }
 
 export default function IoWorkloadStrip({
   processes,
   processStyles,
   quantum,
+  rightBadge,
 }: IoWorkloadStripProps) {
+  const badge =
+    rightBadge ?? (quantum !== undefined ? `quantum = ${quantum}` : null);
   return (
     <section className="rounded-xl border bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="m-0 text-base font-bold text-slate-950 dark:text-slate-50">
           נתוני השאלה
         </h3>
-        <span className="rounded-md bg-amber-50 px-2 py-0.5 font-mono text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
-          quantum = {quantum}
-        </span>
+        {badge ? (
+          <span className="rounded-md bg-amber-50 px-2 py-0.5 font-mono text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+            {badge}
+          </span>
+        ) : null}
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3">

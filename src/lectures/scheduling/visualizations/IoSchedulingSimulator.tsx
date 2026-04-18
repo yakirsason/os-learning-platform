@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import StepController from '@/components/common/StepController';
 import { IO_RR_DEFAULT_QUANTUM, runIoRoundRobin } from '../lib/ioRoundRobinScheduling';
+import {
+  SCHEDULING_PRESETS_BY_ID,
+  getPresetsForAlgorithm,
+} from '../lib/schedulingPresets';
 import type { SchedulingProcess } from '../lib/schedulingTypes';
 import IoAwareTimelineStrip from './timeline/IoAwareTimelineStrip';
 import IoTimelineQueuePanel from './timeline/IoTimelineQueuePanel';
 import IoWorkloadStrip from './timeline/IoWorkloadStrip';
+import PresetSelector from './timeline/PresetSelector';
 import TimelineCurrentEventPanel from './timeline/TimelineCurrentEventPanel';
 import TimelineWorkloadSummary from './timeline/TimelineWorkloadSummary';
 import {
   calculateRemainingBursts,
-  type TimelineProcessStyles,
+  computeProcessStyles,
 } from './timeline/timelineTypes';
 
-const WORKLOAD: SchedulingProcess[] = [
+const DEMO_WORKLOAD: SchedulingProcess[] = [
   {
     id: 'P1',
     arrivalTime: 0,
@@ -48,32 +53,27 @@ const WORKLOAD: SchedulingProcess[] = [
   },
 ];
 
-const PROCESS_STYLES: TimelineProcessStyles = {
-  P1: {
-    solid: 'bg-blue-600 dark:bg-blue-500',
-    soft: 'bg-blue-50 dark:bg-blue-950/30',
-    text: 'text-blue-700 dark:text-blue-200',
-    border: 'border-blue-200 dark:border-blue-900',
-  },
-  P2: {
-    solid: 'bg-emerald-600 dark:bg-emerald-500',
-    soft: 'bg-emerald-50 dark:bg-emerald-950/30',
-    text: 'text-emerald-700 dark:text-emerald-200',
-    border: 'border-emerald-200 dark:border-emerald-900',
-  },
-  P3: {
-    solid: 'bg-amber-500 dark:bg-amber-400',
-    soft: 'bg-amber-50 dark:bg-amber-950/30',
-    text: 'text-amber-700 dark:text-amber-200',
-    border: 'border-amber-200 dark:border-amber-900',
-  },
-};
+const AVAILABLE_PRESETS = getPresetsForAlgorithm('io-round-robin');
 
 export default function IoSchedulingSimulator() {
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const result = useMemo(() => runIoRoundRobin(WORKLOAD, IO_RR_DEFAULT_QUANTUM), []);
+  const preset = selectedPresetId
+    ? SCHEDULING_PRESETS_BY_ID[selectedPresetId] ?? null
+    : null;
+  const workload = preset?.processes ?? DEMO_WORKLOAD;
+  const quantum = preset?.roundRobinQuantum ?? IO_RR_DEFAULT_QUANTUM;
+  const processStyles = useMemo(
+    () => computeProcessStyles(workload),
+    [workload]
+  );
+
+  const result = useMemo(
+    () => runIoRoundRobin(workload, quantum),
+    [workload, quantum]
+  );
   const steps = result.steps;
   const totalSteps = steps.length;
   const current = steps[currentStep] ?? steps[0];
@@ -83,8 +83,8 @@ export default function IoSchedulingSimulator() {
   const isRunComplete = currentStep === totalSteps - 1 && totalSteps > 0;
 
   const remainingBursts = useMemo(
-    () => calculateRemainingBursts(WORKLOAD, current.cpuSegments),
-    [current.cpuSegments]
+    () => calculateRemainingBursts(workload, current.cpuSegments),
+    [workload, current.cpuSegments]
   );
 
   const handleNext = useCallback(() => {
@@ -106,6 +106,12 @@ export default function IoSchedulingSimulator() {
 
   const handlePlayPause = useCallback(() => {
     setIsPlaying((playing) => !playing);
+  }, []);
+
+  const handlePresetChange = useCallback((id: string | null) => {
+    setSelectedPresetId(id);
+    setCurrentStep(0);
+    setIsPlaying(false);
   }, []);
 
   useEffect(() => {
@@ -132,10 +138,16 @@ export default function IoSchedulingSimulator() {
         </p>
       </div>
 
+      <PresetSelector
+        presets={AVAILABLE_PRESETS}
+        selectedId={selectedPresetId}
+        onSelect={handlePresetChange}
+      />
+
       <IoWorkloadStrip
-        processes={WORKLOAD}
-        processStyles={PROCESS_STYLES}
-        quantum={IO_RR_DEFAULT_QUANTUM}
+        processes={workload}
+        processStyles={processStyles}
+        quantum={quantum}
       />
 
       <IoAwareTimelineStrip
@@ -143,7 +155,7 @@ export default function IoSchedulingSimulator() {
         ioEntries={current.ioSegments}
         totalTime={totalTime}
         currentTime={current.time}
-        processStyles={PROCESS_STYLES}
+        processStyles={processStyles}
         isRunComplete={isRunComplete}
       />
 
@@ -168,13 +180,13 @@ export default function IoSchedulingSimulator() {
           readyQueue={current.readyQueue}
           waitingProcesses={current.waitingProcesses}
           remainingBursts={remainingBursts}
-          processStyles={PROCESS_STYLES}
+          processStyles={processStyles}
           queueLanes={current.queues}
         />
       </div>
 
       <TimelineWorkloadSummary
-        processes={WORKLOAD}
+        processes={workload}
         metrics={result.metrics}
         averageWaitingTime={result.averageWaitingTime}
         averageTurnaroundTime={result.averageTurnaroundTime}

@@ -14,6 +14,7 @@ export type SchedulingPageSlug =
   | 'io-round-robin'
   | 'multilevel-queue'
   | 'multilevel-feedback-queue'
+  | 'comparison-waiting-time'
   | 'secondary-topics'
   | 'practice'
   | 'summary';

@@ -1,5 +1,6 @@
 import StudyCallout from '@/components/common/StudyCallout';
 import PageShell from '../components/PageShell';
+import DiningPhilosophersDemo from '../visualizations/DiningPhilosophersDemo';
 
 export default function DiningPhilosophersPage() {
   return (
@@ -18,6 +19,8 @@ export default function DiningPhilosophersPage() {
           זוהי דוגמה קלאסית לקצאת משאבים מרובים בו-זמנית.
         </p>
       </div>
+
+      <DiningPhilosophersDemo />
 
       <div>
         <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-50">
